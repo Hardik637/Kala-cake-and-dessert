@@ -1,33 +1,34 @@
 :root {
-  /* Color Palette - Kalã Restrained Botanical & Blush Bakery */
-  --color-bg: #FAF8F5;              /* Clean warm cream/neutral background (70-80%) */
+  /* Color Palette - Kalã Green (#2B5835) & Pink (#EBCACA) */
+  --color-bg: #FAF4F4;              /* Wholesite background with a delicate touch of Pink (#EBCACA) */
   --color-surface: #FFFFFF;         /* Crisp card surface */
-  --color-surface-warm: #F4EFEA;    /* Soft neutral container */
-  --color-surface-subtle: #EDE7E0;  /* Subtle hover / divider */
-  
-  /* Text & Structure (15-20%) */
+  --color-surface-warm: #F6ECEC;    /* Soft pink-tinted neutral container */
+  --color-surface-subtle: #EFE4E4;  /* Subtle divider / hover */
+
+  /* Text & Structure */
   --color-primary: #2B5835;         /* Brand Deep Bakery Green */
   --color-primary-hover: #214429;   /* Darker forest green */
-  --color-primary-light: #EEF4EF;   /* Soft green wash for subtle tags */
-  
+  --color-primary-light: #EEF4EF;   /* Soft green wash */
+
   --color-text-main: #1D231E;       /* Deep dark neutral charcoal */
   --color-text-muted: #566159;      /* Neutral slate olive */
   --color-text-light: #88938A;      /* Soft neutral stone */
-  
-  /* Restrained Pink Accents (5-10%) */
-  --color-pink: #EBCACA;            /* Soft bakery blush pink */
-  --color-pink-subtle: #FAF2F2;     /* Very soft blush background */
+
+  /* Pink Accents (#EBCACA) */
+  --color-pink: #EBCACA;            /* Signature bakery blush pink */
+  --color-pink-hover: #F2DADA;      /* Lighter blush on hover */
+  --color-pink-subtle: #FAF0F0;     /* Delicate blush background */
   --color-pink-border: #E2BCBC;     /* Subtle pink border */
-  --color-pink-text: #664343;       /* Contrast text for pink badges */
+  --color-pink-text: #5A3535;       /* Contrast text for pink badges */
 
   /* Primary Action / Accent Aliases */
   --color-accent: #2B5835;          /* Forest green primary CTA */
   --color-accent-hover: #214429;
-  --color-accent-light: #FAF2F2;    /* Soft blush background */
+  --color-accent-light: #FAF0F0;
 
-  /* Neutral Borders */
-  --color-border: #E2DCD4;          /* Delicate warm border */
-  --color-border-subtle: #EDE7E0;   /* Very soft divider */
+  /* Rose-tinted Neutral Borders */
+  --color-border: #E8DADA;          /* Delicate warm blush border */
+  --color-border-subtle: #F2E6E6;   /* Very soft divider */
 
   /* Order & Milestone Status */
   --status-new-bg: #EAE6DE;
@@ -48,11 +49,11 @@
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-script: 'Parisienne', 'Alex Brush', cursive;
 
-  /* Shadows - Subtle & Clean */
-  --shadow-sm: 0 1px 3px rgba(29, 35, 30, 0.05);
-  --shadow-md: 0 4px 14px rgba(29, 35, 30, 0.06);
-  --shadow-lg: 0 10px 25px rgba(29, 35, 30, 0.08);
-  --shadow-drawer: -4px 0 24px rgba(29, 35, 30, 0.10);
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(43, 88, 53, 0.06);
+  --shadow-md: 0 4px 14px rgba(43, 88, 53, 0.08);
+  --shadow-lg: 0 10px 25px rgba(43, 88, 53, 0.10);
+  --shadow-drawer: -4px 0 24px rgba(43, 88, 53, 0.14);
 
   /* Radii */
   --radius-sm: 6px;

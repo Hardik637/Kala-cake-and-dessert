@@ -57,7 +57,9 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
           position: 'sticky',
           top: 0,
           zIndex: 100,
-          background: isScrolled ? 'rgba(250, 248, 245, 0.98)' : 'var(--color-bg)',
+          background: '#2B5835',
+          borderBottom: '1px solid rgba(235, 202, 202, 0.22)',
+          boxShadow: isScrolled ? '0 4px 18px rgba(0, 0, 0, 0.18)' : 'none',
           backdropFilter: 'blur(10px)',
           borderBottom: isScrolled ? '1px solid var(--color-border)' : '1px solid transparent',
           transition: 'all var(--transition-fast)',
@@ -102,9 +104,10 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
                 alt="Kalã Logo"
                 className="nav-bakery-logo"
                 style={{
-                  height: 'clamp(32px, 4.5vw, 42px)',
+                  height: 'clamp(38px, 5vw, 46px)',
                   width: 'auto',
-                  maxHeight: '42px',
+                  maxHeight: '46px',
+                  borderRadius: '4px',
                   objectFit: 'contain',
                   display: 'block',
                   flexShrink: 0,
@@ -117,7 +120,7 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
                     fontFamily: 'var(--font-serif)',
                     fontSize: 'clamp(1.2rem, 3.6vw, 1.48rem)',
                     fontWeight: 700,
-                    color: 'var(--color-text-main)',
+                    color: '#FFFFFF',
                     letterSpacing: '0.04em',
                     display: 'block',
                     lineHeight: 1.1,
@@ -132,7 +135,7 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
                     fontSize: 'clamp(0.58rem, 1.8vw, 0.68rem)',
                     letterSpacing: '0.14em',
                     textTransform: 'uppercase',
-                    color: 'var(--color-primary)',
+                    color: 'var(--color-pink)',
                     display: 'block',
                     marginTop: '2px',
                     fontWeight: 600,
@@ -164,19 +167,22 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
             {isCustomerAuthenticated ? (
               <button
                 onClick={() => handleNav('profile')}
-                className="btn btn-secondary nav-account-btn"
+                className="btn nav-account-btn"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 14px',
                   borderRadius: 'var(--radius-full)',
                   fontSize: '0.85rem',
                   minHeight: '44px',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(235, 202, 202, 0.35)',
                 }}
                 title="Your Profile"
               >
-                <User size={16} color="var(--color-primary)" />
+                <User size={16} color="var(--color-pink)" />
                 <span className="desktop-only" style={{ maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {customerUser?.name?.split(' ')[0] || 'Account'}
                 </span>
@@ -198,7 +204,7 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
             ) : (
               <button
                 onClick={onOpenAuth}
-                className="btn btn-secondary nav-account-btn"
+                className="btn nav-account-btn"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -210,15 +216,15 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
                   borderRadius: 'var(--radius-full)',
                 }}
               >
-                <User size={16} />
-                <span className="desktop-only">Log In</span>
+                <User size={16} color="var(--color-pink)" />
+                <span className="desktop-only" style={{ color: "#FFFFFF" }}>Log In</span>
               </button>
             )}
 
             {/* Cart Trigger */}
             <button
               onClick={openCart}
-              className="btn btn-primary"
+              className="btn nav-cart-btn"
               style={{
                 position: 'relative',
                 display: 'flex',
@@ -250,7 +256,7 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: '2px solid #FFFFFF',
+                    border: '2px solid var(--color-pink)',
                   }}
                 >
                   {itemCount}
@@ -267,7 +273,7 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
                 border: 'none',
                 padding: '10px',
                 cursor: 'pointer',
-                color: 'var(--color-primary)',
+                color: '#FFFFFF',
                 display: 'none',
                 minWidth: '44px',
                 minHeight: '44px',
@@ -290,8 +296,9 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
           style={{
             position: 'fixed',
             inset: 'var(--nav-height, 68px) 0 0 0',
-            background: 'var(--color-bg)',
+            background: '#2B5835',
             zIndex: 99,
+            borderTop: '1px solid rgba(235, 202, 202, 0.2)',
             padding: '24px 20px',
             display: 'flex',
             flexDirection: 'column',
@@ -309,9 +316,9 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
                 fontFamily: 'var(--font-serif)',
                 fontSize: '1.4rem',
                 textAlign: 'left',
-                color: activePage === link.id ? 'var(--color-primary)' : 'var(--color-text-main)',
+                color: activePage === link.id ? 'var(--color-pink)' : '#FFFFFF',
                 padding: '12px 0',
-                borderBottom: '1px solid var(--color-border)',
+                borderBottom: '1px solid rgba(235, 202, 202, 0.15)',
                 cursor: 'pointer',
                 minHeight: '44px',
                 display: 'flex',

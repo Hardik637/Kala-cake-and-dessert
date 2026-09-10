@@ -638,3 +638,63 @@
   70% { box-shadow: 0 0 0 8px rgba(184, 107, 83, 0); }
   100% { box-shadow: 0 0 0 0 rgba(184, 107, 83, 0); }
 }
+
+/* Green Navbar Navigation Overrides (#2B5835) */
+.main-navbar .nav-link-btn {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.main-navbar .nav-link-btn:hover {
+  color: var(--color-pink);
+}
+
+.main-navbar .nav-link-btn::after {
+  background: var(--color-pink);
+}
+
+.main-navbar .nav-link-btn.active {
+  color: var(--color-pink);
+  font-weight: 600;
+}
+
+.main-navbar .nav-link-btn.active::after {
+  background: var(--color-pink);
+  width: 100%;
+  left: 0%;
+}
+
+/* Green Navbar Button Styles (#2B5835 with #EBCACA accents) */
+.main-navbar .nav-account-btn {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(235, 202, 202, 0.45) !important;
+}
+
+.main-navbar .nav-account-btn:hover {
+  background: rgba(235, 202, 202, 0.22) !important;
+  border-color: var(--color-pink) !important;
+  color: #FFFFFF !important;
+}
+
+.main-navbar .nav-cart-btn {
+  background: var(--color-pink) !important;
+  color: var(--color-primary) !important;
+  border: 1px solid var(--color-pink) !important;
+  font-weight: 700 !important;
+}
+
+.main-navbar .nav-cart-btn:hover {
+  background: var(--color-pink-hover) !important;
+  border-color: var(--color-pink-hover) !important;
+  color: var(--color-primary-hover) !important;
+  transform: translateY(-1px);
+}
+
+.main-navbar .mobile-hamburger-btn {
+  color: #FFFFFF !important;
+}
+
+.main-navbar .mobile-hamburger-btn:hover {
+  color: var(--color-pink) !important;
+}
