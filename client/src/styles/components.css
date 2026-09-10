@@ -92,6 +92,55 @@
   pointer-events: none;
 }
 
+/* Fancy Navigation Links with Animated Expanding Underline */
+.nav-link-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 8px 4px;
+  position: relative;
+  transition: color var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.nav-link-btn:hover {
+  color: var(--color-text-main);
+}
+
+.nav-link-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-accent), #D48B70);
+  border-radius: 999px;
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1), left 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-link-btn:hover::after {
+  width: 100%;
+  left: 0%;
+}
+
+.nav-link-btn.active {
+  color: var(--color-text-main);
+  font-weight: 600;
+}
+
+.nav-link-btn.active::after {
+  width: 100%;
+  left: 0%;
+  background: var(--color-accent);
+}
+
 /* Category Filter Bar */
 .category-scroll-container {
   width: 100%;

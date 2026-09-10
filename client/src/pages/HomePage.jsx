@@ -7,6 +7,7 @@ import MilestoneTracker from '../components/MilestoneTracker';
 import { api } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { useStoreSettings } from '../context/StoreSettingsContext';
+import customCakeImg from '../assets/custom_cake.jpg';
 
 export default function HomePage({ setActivePage, onOpenAuth }) {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -27,7 +28,6 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
   const brandName = settings?.brand_name || BRAND_CONFIG.name || 'Kala';
   const brandTagline = settings?.brand_tagline || BRAND_CONFIG.tagline || 'Cakes and Desserts';
 
-  const heroHeading = settings?.hero_heading || 'Fresh cakes and desserts made for every occasion.';
   const heroSubtitle = settings?.hero_subtitle || 'Order your favorite cakes, dessert tubs, brownies, and cookies online, or talk to us for custom celebration cakes.';
   const heroImage = settings?.hero_image_url || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80';
 
@@ -58,6 +58,26 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
     },
   ];
 
+
+  // Dynamic Scroll Reveal on Homepage
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-revealed');
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+    );
+
+    const elements = document.querySelectorAll('.reveal-on-scroll');
+    elements.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [featuredProducts]);
+
   return (
     <div style={{ width: '100%', overflowX: 'hidden' }}>
       {/* 1. HERO SECTION */}
@@ -68,12 +88,17 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
           backgroundColor: '#FAF7F2',
           backgroundImage: `radial-gradient(#E8DFD3 1px, transparent 1px)`,
           backgroundSize: '24px 24px',
-          padding: 'clamp(40px, 8vw, 80px) 0',
+          padding: 'clamp(44px, 8vw, 84px) 0',
           width: '100%',
           boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
-        <div className="container" style={{ padding: '0 16px', boxSizing: 'border-box' }}>
+        {/* Dynamic Glow Orbs */}
+        <div className="glow-orb glow-orb-primary" style={{ width: '420px', height: '420px', top: '-60px', left: '-100px' }} />
+        <div className="glow-orb glow-orb-gold" style={{ width: '380px', height: '380px', bottom: '-50px', right: '-80px' }} />
+
+        <div className="container" style={{ padding: '0 16px', boxSizing: 'border-box', position: 'relative', zIndex: 1 }}>
           <div
             style={{
               display: 'grid',
@@ -89,36 +114,40 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '6px 14px',
+                  padding: '7px 16px',
                   background: 'var(--color-surface-warm)',
                   borderRadius: 'var(--radius-full)',
-                  marginBottom: '16px',
+                  marginBottom: '18px',
                   border: '1px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-sm)',
                 }}
               >
                 <Sparkles size={14} color="var(--color-accent)" />
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--color-accent)' }}>
-                  {brandName} • {brandTagline}
+                <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--color-accent)' }}>
+                  {brandName} • <span className="font-script" style={{ textTransform: 'none', fontSize: '1.25em', letterSpacing: 0, color: 'var(--color-accent)' }}>Made with love</span>
                 </span>
               </div>
 
+              {/* Editorial Main Heading */}
               <h1
                 style={{
-                  marginBottom: '16px',
+                  marginBottom: '18px',
                   lineHeight: 1.15,
-                  fontSize: 'clamp(2rem, 6vw, 3.4rem)',
-                  fontWeight: 700,
+                  fontSize: 'clamp(2.3rem, 6.2vw, 3.8rem)',
+                  fontWeight: 600,
+                  letterSpacing: '-0.02em',
                 }}
               >
-                {heroHeading}
+                Life is <span className="script-accent" style={{ fontSize: '1.28em', padding: '0 4px' }}>better</span> with cake.
               </h1>
 
               <p
                 style={{
                   fontSize: 'clamp(1rem, 2.5vw, 1.15rem)',
                   color: 'var(--color-text-muted)',
-                  marginBottom: '28px',
-                  lineHeight: 1.6,
+                  marginBottom: '32px',
+                  lineHeight: 1.65,
+                  maxWidth: '520px',
                 }}
               >
                 {heroSubtitle}
@@ -128,7 +157,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
                 <button
                   onClick={() => { setActivePage('menu'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   className="btn btn-primary btn-lg"
-                  style={{ minHeight: '48px', minWidth: '150px', justifyContent: 'center' }}
+                  style={{ minHeight: '48px', minWidth: '150px', justifyContent: 'center', gap: '8px' }}
                 >
                   <span>View Menu</span>
                   <ArrowRight size={18} />
@@ -147,8 +176,9 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
             {/* Hero Image Column */}
             <div style={{ position: 'relative', width: '100%' }}>
               <div
+                className="interactive-card"
                 style={{
-                  borderRadius: 'var(--radius-lg, 16px)',
+                  borderRadius: 'var(--radius-lg, 18px)',
                   overflow: 'hidden',
                   boxShadow: 'var(--shadow-lg)',
                   aspectRatio: '4/3',
@@ -158,7 +188,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
               >
                 <img
                   src={heroImage}
-                  alt={`${brandName} Fresh Cakes and Desserts`}
+                  alt="Fresh artisan chocolate cake"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
@@ -167,12 +197,14 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
         </div>
       </section>
 
-      {/* 2. POPULAR / FEATURED DESSERTS */}
+      {/* 2. POPULAR DESSERTS SECTION */}
       <section className="section-spacing" style={{ width: '100%', boxSizing: 'border-box' }}>
         <div className="container" style={{ padding: '0 16px', boxSizing: 'border-box' }}>
-          <div className="section-header" style={{ marginBottom: '36px' }}>
+          <div className="section-header">
             <span className="section-eyebrow">Our Favorites</span>
-            <h2 className="section-title">Popular Desserts</h2>
+            <h2 className="section-title">
+              Popular <span className="script-accent">Desserts</span>
+            </h2>
             <p className="section-subtitle">
               Customer favorites baked fresh and ready to order.
             </p>
@@ -185,23 +217,17 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
             </div>
           ) : featuredProducts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
-              <p>Check out our menu for fresh treats today.</p>
-              <button
-                onClick={() => { setActivePage('menu'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="btn btn-primary"
-                style={{ marginTop: '16px' }}
-              >
-                View Menu
-              </button>
+              <p>No featured products available at the moment.</p>
             </div>
           ) : (
             <div className="product-grid">
               {featuredProducts.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  onSelectProduct={(prod) => setSelectedProduct(prod)}
-                />
+                <div key={p.id} className="interactive-card" style={{ display: 'flex' }}>
+                  <ProductCard
+                    product={p}
+                    onSelectProduct={(prod) => setSelectedProduct(prod)}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -210,7 +236,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
             <button
               onClick={() => { setActivePage('menu'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               className="btn btn-secondary btn-lg"
-              style={{ minHeight: '46px' }}
+              style={{ minHeight: '46px', gap: '8px' }}
             >
               <span>Explore All Desserts</span>
               <ArrowRight size={16} />
@@ -223,7 +249,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
       <section
         style={{
           background: 'var(--color-surface-warm)',
-          padding: 'clamp(40px, 7vw, 70px) 0',
+          padding: 'clamp(44px, 7vw, 76px) 0',
           borderTop: '1px solid var(--color-border)',
           borderBottom: '1px solid var(--color-border)',
           width: '100%',
@@ -233,7 +259,9 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
         <div className="container" style={{ padding: '0 16px', boxSizing: 'border-box' }}>
           <div className="section-header" style={{ marginBottom: '36px' }}>
             <span className="section-eyebrow">Browse Our Menu</span>
-            <h2 className="section-title">Shop by Category</h2>
+            <h2 className="section-title">
+              Shop by <span className="script-accent">Category</span>
+            </h2>
             <p className="section-subtitle">
               Choose your favorite fresh bake from our four simple categories.
             </p>
@@ -253,6 +281,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
                   setActivePage('menu');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
+                className="interactive-card"
                 style={{
                   background: '#FFFFFF',
                   borderRadius: '16px',
@@ -260,20 +289,19 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
                   border: '1px solid var(--color-border)',
                   cursor: 'pointer',
                   boxShadow: 'var(--shadow-sm)',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                   display: 'flex',
                   flexDirection: 'column',
                 }}
               >
-                <div style={{ height: '170px', width: '100%', overflow: 'hidden' }}>
+                <div style={{ height: '175px', width: '100%', overflow: 'hidden' }}>
                   <img
                     src={cat.image}
                     alt={cat.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }}
                   />
                 </div>
                 <div style={{ padding: '18px 16px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '6px' }}>{cat.title}</h3>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '6px' }}>{cat.title}</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '14px', lineHeight: 1.4, flexGrow: 1 }}>
                     {cat.desc}
                   </p>
@@ -289,13 +317,14 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
       </section>
 
       {/* 4. CUSTOM CAKES HIGHLIGHT */}
-      <section className="section-spacing" style={{ width: '100%', boxSizing: 'border-box' }}>
+      <section className="section-spacing" style={{ width: '100%', boxSizing: 'border-box', position: 'relative' }}>
         <div className="container" style={{ padding: '0 16px', boxSizing: 'border-box' }}>
           <div
+            className="interactive-card"
             style={{
               background: '#FFFFFF',
               border: '1px solid var(--color-border)',
-              borderRadius: '20px',
+              borderRadius: '24px',
               padding: 'clamp(28px, 6vw, 56px)',
               boxShadow: 'var(--shadow-md)',
               display: 'grid',
@@ -306,18 +335,18 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
           >
             <div>
               <span className="section-eyebrow" style={{ marginBottom: '8px' }}>
-                Special Occasions
+                Bespoke Celebrations
               </span>
-              <h2 style={{ fontSize: 'clamp(1.75rem, 5vw, 2.4rem)', marginBottom: '14px', lineHeight: 1.2 }}>
-                Custom Cakes
+              <h2 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.7rem)', marginBottom: '14px', lineHeight: 1.2, fontWeight: 600 }}>
+                More Than Cake, It's <span className="script-accent">Connection</span>.
               </h2>
-              <p style={{ fontSize: '1.05rem', color: 'var(--color-text-muted)', lineHeight: 1.6, marginBottom: '24px' }}>
-                Have a cake idea in mind? Tell us what you need and we'll get back to you with the details. We create custom cakes for birthdays, anniversaries, and all your celebrations.
+              <p style={{ fontSize: '1.05rem', color: 'var(--color-text-muted)', lineHeight: 1.65, marginBottom: '28px' }}>
+                Have a cake idea in mind? Tell us what you need and we'll get back to you with the details. From milestone celebrations to intimate gatherings, every custom cake is handcrafted fresh for your special moments.
               </p>
               <button
                 onClick={() => { setActivePage('custom'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 className="btn btn-primary btn-lg"
-                style={{ minHeight: '46px' }}
+                style={{ minHeight: '48px', gap: '10px' }}
               >
                 <span>Order a Custom Cake</span>
                 <ArrowRight size={18} />
@@ -326,18 +355,41 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
 
             <div
               style={{
-                borderRadius: '16px',
+                position: 'relative',
+                borderRadius: '20px',
                 overflow: 'hidden',
                 aspectRatio: '4/3',
-                maxHeight: '360px',
+                maxHeight: '380px',
                 width: '100%',
+                boxShadow: 'var(--shadow-md)',
               }}
             >
               <img
-                src="https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=700&q=80"
+                src={customCakeImg}
                 alt="Custom celebration cake"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.5s ease' }}
               />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  left: '16px',
+                  background: 'rgba(255, 255, 255, 0.94)',
+                  backdropFilter: 'blur(8px)',
+                  padding: '7px 16px',
+                  borderRadius: '999px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: 'var(--color-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: 'var(--shadow-sm)',
+                }}
+              >
+                <Sparkles size={14} color="var(--color-accent)" />
+                <span>Handcrafted with <span className="font-script" style={{ fontSize: '1.25em', color: 'var(--color-accent)' }}>Love</span></span>
+              </div>
             </div>
           </div>
         </div>
@@ -347,7 +399,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
       <section
         style={{
           background: 'var(--color-surface-warm)',
-          padding: 'clamp(40px, 7vw, 70px) 0',
+          padding: 'clamp(44px, 7vw, 76px) 0',
           borderTop: '1px solid var(--color-border)',
           borderBottom: '1px solid var(--color-border)',
           width: '100%',
@@ -356,8 +408,10 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
       >
         <div className="container" style={{ maxWidth: '860px', padding: '0 16px', boxSizing: 'border-box' }}>
           <div className="section-header" style={{ marginBottom: '32px' }}>
-            <span className="section-eyebrow">Kala Rewards</span>
-            <h2 className="section-title">Complete Orders and Unlock Rewards</h2>
+            <span className="section-eyebrow">Customer Loyalty</span>
+            <h2 className="section-title">
+              Kala <span className="script-accent">Rewards</span>
+            </h2>
             <p className="section-subtitle">
               Every delivered order counts toward complimentary treats.
             </p>
@@ -367,10 +421,11 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
             <MilestoneTracker milestone={customerMilestone} />
           ) : (
             <div
+              className="interactive-card"
               style={{
                 background: '#FFFFFF',
-                borderRadius: '16px',
-                padding: '36px 24px',
+                borderRadius: '20px',
+                padding: '38px 26px',
                 textAlign: 'center',
                 border: '1px solid var(--color-border)',
                 boxShadow: 'var(--shadow-sm)',
@@ -391,8 +446,8 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
               >
                 <Gift size={28} />
               </div>
-              <h3 style={{ fontSize: '1.4rem', marginBottom: '8px' }}>Join Kala Rewards</h3>
-              <p style={{ color: 'var(--color-text-muted)', marginBottom: '24px', maxWidth: '480px', margin: '0 auto 24px auto', fontSize: '0.95rem' }}>
+              <h3 style={{ fontSize: '1.45rem', marginBottom: '8px', fontWeight: 600 }}>Join Kala Rewards</h3>
+              <p style={{ color: 'var(--color-text-muted)', marginBottom: '24px', maxWidth: '480px', margin: '0 auto 24px auto', fontSize: '0.95rem', lineHeight: 1.6 }}>
                 Sign in with your Google account to start earning rewards with every delivered order.
               </p>
               <button
@@ -414,7 +469,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
             Our Story
           </span>
           <h2 className="section-title" style={{ marginBottom: '16px' }}>
-            About Kala
+            About <span className="script-accent">Kala</span>
           </h2>
           <p
             style={{
@@ -429,7 +484,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
           <button
             onClick={() => { setActivePage('about'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
             className="btn btn-secondary"
-            style={{ minHeight: '44px', padding: '10px 24px' }}
+            style={{ minHeight: '44px', padding: '10px 24px', gap: '8px' }}
           >
             <span>Read Our Full Story</span>
             <ArrowRight size={16} />

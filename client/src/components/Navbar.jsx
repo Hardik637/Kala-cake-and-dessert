@@ -127,38 +127,14 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
             </button>
 
             {/* Desktop Navigation Links */}
-            <nav className="nav-desktop" style={{ display: 'flex', gap: '20px' }}>
+            <nav className="nav-desktop" style={{ display: 'flex', gap: '22px', alignItems: 'center' }}>
               {navLinks.map((link) => (
                 <button
                   key={link.id}
                   onClick={() => handleNav(link.id)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '0.92rem',
-                    fontWeight: activePage === link.id ? 600 : 400,
-                    color: activePage === link.id ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                    cursor: 'pointer',
-                    padding: '8px 0',
-                    position: 'relative',
-                    transition: 'color var(--transition-fast)',
-                  }}
+                  className={`nav-link-btn ${activePage === link.id ? 'active' : ''}`}
                 >
                   {link.label}
-                  {activePage === link.id && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: '2px',
-                        backgroundColor: 'var(--color-accent)',
-                        borderRadius: '2px',
-                      }}
-                    />
-                  )}
                 </button>
               ))}
             </nav>
