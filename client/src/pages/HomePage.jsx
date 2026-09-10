@@ -31,34 +31,6 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
   const heroSubtitle = settings?.hero_subtitle || 'Order your favorite cakes, dessert tubs, brownies, and cookies online, or talk to us for custom celebration cakes.';
   const heroImage = settings?.hero_image_url || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80';
 
-  const categories = [
-    {
-      id: 'cakes',
-      title: 'Cakes',
-      desc: 'Layered cakes for birthdays & celebrations',
-      image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=500&q=80',
-    },
-    {
-      id: 'dessert-tub',
-      title: 'Dessert Tub',
-      desc: 'Delicious layered tubs ready to spoon',
-      image: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=500&q=80',
-    },
-    {
-      id: 'brownies',
-      title: 'Brownies',
-      desc: 'Fudgy, rich chocolate brownies',
-      image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=500&q=80',
-    },
-    {
-      id: 'cookies',
-      title: 'Cookies',
-      desc: 'Freshly baked chocolate chip & butter cookies',
-      image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=500&q=80',
-    },
-  ];
-
-
   // Dynamic Scroll Reveal on Homepage
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -244,79 +216,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
           </div>
         </div>
       </section>
-
-      {/* 3. SHOP BY CATEGORY (Exactly 4 Categories) */}
-      <section
-        style={{
-          background: 'var(--color-surface-warm)',
-          padding: 'clamp(44px, 7vw, 76px) 0',
-          borderTop: '1px solid var(--color-border)',
-          borderBottom: '1px solid var(--color-border)',
-          width: '100%',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div className="container" style={{ padding: '0 16px', boxSizing: 'border-box' }}>
-          <div className="section-header" style={{ marginBottom: '36px' }}>
-            <span className="section-eyebrow">Browse Our Menu</span>
-            <h2 className="section-title">
-              Shop by <span className="script-accent">Category</span>
-            </h2>
-            <p className="section-subtitle">
-              Choose your favorite fresh bake from our eight handcrafted categories.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
-              gap: '20px',
-            }}
-          >
-            {categories.map((cat) => (
-              <div
-                key={cat.id}
-                onClick={() => {
-                  setActivePage('menu');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="interactive-card"
-                style={{
-                  background: '#FFFFFF',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  border: '1px solid var(--color-border)',
-                  cursor: 'pointer',
-                  boxShadow: 'var(--shadow-sm)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <div style={{ height: '175px', width: '100%', overflow: 'hidden' }}>
-                  <img
-                    src={cat.image}
-                    alt={cat.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }}
-                  />
-                </div>
-                <div style={{ padding: '18px 16px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '6px' }}>{cat.title}</h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '14px', lineHeight: 1.4, flexGrow: 1 }}>
-                    {cat.desc}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', fontSize: '0.88rem', fontWeight: 600 }}>
-                    <span>Browse {cat.title}</span>
-                    <ArrowRight size={15} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 4. CUSTOM CAKES HIGHLIGHT */}
+{/* 4. CUSTOM CAKES HIGHLIGHT */}
       <section className="section-spacing" style={{ width: '100%', boxSizing: 'border-box', position: 'relative' }}>
         <div className="container" style={{ padding: '0 16px', boxSizing: 'border-box' }}>
           <div
