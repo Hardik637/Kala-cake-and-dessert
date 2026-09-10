@@ -27,8 +27,8 @@
 }
 
 .btn-primary:hover {
-  background-color: var(--color-accent);
-  border-color: var(--color-accent);
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
@@ -120,7 +120,7 @@
   left: 50%;
   width: 0%;
   height: 2px;
-  background: linear-gradient(90deg, var(--color-accent), #D48B70);
+  background: var(--color-primary);
   border-radius: 999px;
   transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1), left 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -138,7 +138,7 @@
 .nav-link-btn.active::after {
   width: 100%;
   left: 0%;
-  background: var(--color-accent);
+  background: var(--color-primary);
 }
 
 /* Category Filter Bar */

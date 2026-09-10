@@ -40,7 +40,7 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
     { id: 'about', label: 'Our Story' },
   ];
 
-  const brandName = settings?.brand_name || BRAND_CONFIG.name || 'Kala';
+  const brandName = settings?.brand_name || BRAND_CONFIG.name || 'Kalã';
   const brandTagline = settings?.brand_tagline || BRAND_CONFIG.tagline || 'Cakes and Desserts';
 
   const handleNav = (id) => {
@@ -57,7 +57,7 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
           position: 'sticky',
           top: 0,
           zIndex: 100,
-          background: isScrolled ? 'rgba(250, 247, 242, 0.98)' : '#FAF7F2',
+          background: isScrolled ? 'rgba(250, 248, 245, 0.98)' : 'var(--color-bg)',
           backdropFilter: 'blur(10px)',
           borderBottom: isScrolled ? '1px solid var(--color-border)' : '1px solid transparent',
           transition: 'all var(--transition-fast)',
@@ -90,40 +90,58 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
                 textAlign: 'left',
                 padding: '4px 0',
                 display: 'flex',
-                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px',
                 minWidth: 0,
               }}
-              aria-label="Kala Cakes and Desserts Homepage"
+              aria-label="Kalã Cakes and Desserts Homepage"
             >
-              <span
+              {/* Bakery Logo (Slot targeting client/public/logo.png) */}
+              <img
+                src="/logo.png"
+                alt="Kalã Logo"
+                className="nav-bakery-logo"
                 style={{
-                  fontFamily: 'var(--font-serif)',
-                  fontSize: 'clamp(1.25rem, 4vw, 1.55rem)',
-                  fontWeight: 700,
-                  color: 'var(--color-primary)',
-                  letterSpacing: '0.04em',
+                  height: 'clamp(32px, 4.5vw, 42px)',
+                  width: 'auto',
+                  maxHeight: '42px',
+                  objectFit: 'contain',
                   display: 'block',
-                  lineHeight: 1.1,
-                  textTransform: 'uppercase',
+                  flexShrink: 0,
                 }}
-              >
-                {brandName}
-              </span>
-              <span
-                style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: 'clamp(0.62rem, 2vw, 0.72rem)',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: 'var(--color-accent)',
-                  display: 'block',
-                  marginTop: '1px',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {brandTagline}
-              </span>
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-serif)',
+                    fontSize: 'clamp(1.2rem, 3.6vw, 1.48rem)',
+                    fontWeight: 700,
+                    color: 'var(--color-text-main)',
+                    letterSpacing: '0.04em',
+                    display: 'block',
+                    lineHeight: 1.1,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {brandName}
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: 'clamp(0.58rem, 1.8vw, 0.68rem)',
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    color: 'var(--color-primary)',
+                    display: 'block',
+                    marginTop: '2px',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {brandTagline}
+                </span>
+              </div>
             </button>
 
             {/* Desktop Navigation Links */}
@@ -272,7 +290,7 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
           style={{
             position: 'fixed',
             inset: 'var(--nav-height, 68px) 0 0 0',
-            background: '#FAF7F2',
+            background: 'var(--color-bg)',
             zIndex: 99,
             padding: '24px 20px',
             display: 'flex',
@@ -291,7 +309,7 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
                 fontFamily: 'var(--font-serif)',
                 fontSize: '1.4rem',
                 textAlign: 'left',
-                color: activePage === link.id ? 'var(--color-accent)' : 'var(--color-primary)',
+                color: activePage === link.id ? 'var(--color-primary)' : 'var(--color-text-main)',
                 padding: '12px 0',
                 borderBottom: '1px solid var(--color-border)',
                 cursor: 'pointer',

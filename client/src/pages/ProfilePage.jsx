@@ -222,7 +222,7 @@ export default function ProfilePage({ setActivePage, setTrackOrderId }) {
             }}
           >
             <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', fontFamily: 'var(--font-serif)' }}>
-              Kala Rewards Privileges
+              Kalã Rewards Privileges
             </h3>
             <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', lineHeight: 1.6, marginBottom: '20px' }}>
               Your account is active and automatically participating in our loyalty milestone program. Every delivered order brings you closer to complimentary treats.

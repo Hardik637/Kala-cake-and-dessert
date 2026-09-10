@@ -1,50 +1,58 @@
 :root {
-  /* Color Palette - Kala Warm Artisanal Bakery */
-  --color-bg: #FAF7F2;              /* Warm ivory background */
+  /* Color Palette - Kalã Restrained Botanical & Blush Bakery */
+  --color-bg: #FAF8F5;              /* Clean warm cream/neutral background (70-80%) */
   --color-surface: #FFFFFF;         /* Crisp card surface */
-  --color-surface-warm: #F4EFE6;    /* Muted cream container */
-  --color-surface-subtle: #EFE9DE;  /* Hover / soft background */
+  --color-surface-warm: #F4EFEA;    /* Soft neutral container */
+  --color-surface-subtle: #EDE7E0;  /* Subtle hover / divider */
   
-  --color-primary: #241A15;         /* Deep warm chocolate / charcoal */
-  --color-text-main: #241A15;       /* Espresso chocolate */
-  --color-text-muted: #6B5E55;      /* Warm taupe */
-  --color-text-light: #94877E;      /* Muted stone */
+  /* Text & Structure (15-20%) */
+  --color-primary: #2B5835;         /* Brand Deep Bakery Green */
+  --color-primary-hover: #214429;   /* Darker forest green */
+  --color-primary-light: #EEF4EF;   /* Soft green wash for subtle tags */
   
-  /* Artisanal Accents */
-  --color-accent: #B86B53;          /* Glazed terracotta / warm caramel */
-  --color-accent-hover: #A05942;    /* Deep terracotta */
-  --color-accent-light: #F7EDE9;    /* Soft terracotta wash */
+  --color-text-main: #1D231E;       /* Deep dark neutral charcoal */
+  --color-text-muted: #566159;      /* Neutral slate olive */
+  --color-text-light: #88938A;      /* Soft neutral stone */
   
-  --color-gold: #C5A059;            /* Warm honey gold */
-  --color-gold-light: #FAF4E8;      /* Subtle gold wash */
+  /* Restrained Pink Accents (5-10%) */
+  --color-pink: #EBCACA;            /* Soft bakery blush pink */
+  --color-pink-subtle: #FAF2F2;     /* Very soft blush background */
+  --color-pink-border: #E2BCBC;     /* Subtle pink border */
+  --color-pink-text: #664343;       /* Contrast text for pink badges */
 
-  --color-border: #E8DFD3;          /* Delicate warm border */
-  --color-border-subtle: #F0E9DF;   /* Very soft divider */
+  /* Primary Action / Accent Aliases */
+  --color-accent: #2B5835;          /* Forest green primary CTA */
+  --color-accent-hover: #214429;
+  --color-accent-light: #FAF2F2;    /* Soft blush background */
+
+  /* Neutral Borders */
+  --color-border: #E2DCD4;          /* Delicate warm border */
+  --color-border-subtle: #EDE7E0;   /* Very soft divider */
 
   /* Order & Milestone Status */
-  --status-new-bg: #EAE3D2;
-  --status-new-text: #5A4E38;
-  --status-preparing-bg: #F5E5C9;
-  --status-preparing-text: #704B18;
-  --status-ready-bg: #E3E9F3;
-  --status-ready-text: #2A4365;
-  --status-out-bg: #DCE8E8;
-  --status-out-text: #234E52;
-  --status-delivered-bg: #E0EBDD;
-  --status-delivered-text: #22543D;
-  --status-cancelled-bg: #F5DEDD;
-  --status-cancelled-text: #742A2A;
+  --status-new-bg: #EAE6DE;
+  --status-new-text: #454E46;
+  --status-preparing-bg: #F5EDE6;
+  --status-preparing-text: #664936;
+  --status-ready-bg: #E4ECE5;
+  --status-ready-text: #2B5835;
+  --status-out-bg: #E3EBE8;
+  --status-out-text: #23473E;
+  --status-delivered-bg: #EEF4EF;
+  --status-delivered-text: #214429;
+  --status-cancelled-bg: #F6E2E2;
+  --status-cancelled-text: #702A2A;
 
   /* Typography System */
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-script: 'Parisienne', 'Alex Brush', cursive;
 
-  /* Shadows */
-  --shadow-sm: 0 2px 6px rgba(36, 26, 21, 0.04);
-  --shadow-md: 0 6px 18px rgba(36, 26, 21, 0.07);
-  --shadow-lg: 0 14px 35px rgba(36, 26, 21, 0.10);
-  --shadow-drawer: -6px 0 30px rgba(36, 26, 21, 0.12);
+  /* Shadows - Subtle & Clean */
+  --shadow-sm: 0 1px 3px rgba(29, 35, 30, 0.05);
+  --shadow-md: 0 4px 14px rgba(29, 35, 30, 0.06);
+  --shadow-lg: 0 10px 25px rgba(29, 35, 30, 0.08);
+  --shadow-drawer: -4px 0 24px rgba(29, 35, 30, 0.10);
 
   /* Radii */
   --radius-sm: 6px;

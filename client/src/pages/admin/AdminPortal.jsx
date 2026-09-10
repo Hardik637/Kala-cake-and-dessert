@@ -29,7 +29,7 @@ export default function AdminPortal({ onReturnToStore }) {
       {/* Left Sidebar */}
       <aside className="admin-sidebar">
         <div className="admin-sidebar-header">
-          <span className="admin-brand-tag">Kala Admin</span>
+          <span className="admin-brand-tag">Kalã Admin</span>
           <h2 className="admin-brand-title">{BRAND_CONFIG.name}</h2>
           <span style={{ fontSize: '0.75rem', color: '#A89C91' }}>Owner Portal</span>
         </div>

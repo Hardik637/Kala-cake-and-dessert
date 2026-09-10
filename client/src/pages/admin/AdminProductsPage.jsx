@@ -19,10 +19,14 @@ const PHOTO_PRESETS = [
 ];
 
 const CANONICAL_CATEGORIES = [
-  { id: 1, name: 'Cakes', slug: 'cakes' },
-  { id: 2, name: 'Dessert Tub', slug: 'dessert-tub' },
-  { id: 3, name: 'Brownies', slug: 'brownies' },
-  { id: 4, name: 'Cookies', slug: 'cookies' },
+  { id: 1, name: 'Baked Cheesecakes', slug: 'baked-cheesecakes' },
+  { id: 2, name: 'Brownies', slug: 'brownies' },
+  { id: 3, name: 'Cookies', slug: 'cookies' },
+  { id: 4, name: 'Desserts', slug: 'desserts' },
+  { id: 5, name: 'Healthy Bakes', slug: 'healthy-bakes' },
+  { id: 6, name: 'Teacakes', slug: 'teacakes' },
+  { id: 7, name: 'Dessert Tubs', slug: 'dessert-tubs' },
+  { id: 8, name: 'Cookie Tin', slug: 'cookie-tin' },
 ];
 
 export default function AdminProductsPage() {

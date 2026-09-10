@@ -1,7 +1,7 @@
 // Central client-side brand and store configuration
 export const BRAND_CONFIG = {
-  name: "Kala",
-  shortName: "Kala",
+  name: "Kalã",
+  shortName: "Kalã",
   tagline: "Cakes and Desserts",
   subTagline: "Fresh cakes and desserts made for every occasion.",
   currency: "₹",
@@ -13,5 +13,6 @@ export const BRAND_CONFIG = {
   hours: "",
   defaultDeliveryFee: 50,
   pickupAvailable: true,
-  instagram: "",
+  instagram: "@kala_cakesanddesserts",
+  instagramUrl: "https://www.instagram.com/kala_cakesanddesserts/",
 };

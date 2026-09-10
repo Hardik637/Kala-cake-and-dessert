@@ -22,7 +22,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden; /* Safety safeguard */
+  overflow-x: hidden;
 }
 
 #root {
@@ -115,13 +115,14 @@ button, input, textarea, select {
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--color-accent);
+  color: var(--color-primary);
   margin-bottom: 12px;
 }
 
 .section-title {
   font-size: clamp(2rem, 3.5vw, 2.8rem);
   margin-bottom: 14px;
+  color: var(--color-text-main);
 }
 
 .section-subtitle {
@@ -137,64 +138,49 @@ button, input, textarea, select {
   font-style: normal;
   display: inline-block;
   padding: 0 4px;
-  color: var(--color-accent);
+  color: var(--color-primary);
   font-size: 1.18em;
   line-height: 0.9;
   letter-spacing: 0.01em;
   vertical-align: baseline;
 }
 
-.gold-accent {
-  color: var(--color-gold);
+/* Subtle Bakery Blush Details */
+.blush-pill {
+  background-color: var(--color-pink-subtle);
+  border: 1px solid var(--color-pink-border);
+  color: var(--color-pink-text);
+  border-radius: var(--radius-full);
+  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
-/* Dynamic Scroll Animations & Floating Glow Orbs */
-.glow-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(65px);
-  pointer-events: none;
-  opacity: 0.45;
-  z-index: 0;
-  animation: floatOrb 10s ease-in-out infinite alternate;
-}
-
-@keyframes floatOrb {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(30px, -20px) scale(1.12); }
-  100% { transform: translate(-20px, 25px) scale(0.92); }
-}
-
-.glow-orb-primary {
-  background: radial-gradient(circle, rgba(184, 107, 83, 0.4) 0%, rgba(184, 107, 83, 0) 70%);
-}
-
-.glow-orb-gold {
-  background: radial-gradient(circle, rgba(197, 160, 89, 0.35) 0%, rgba(197, 160, 89, 0) 70%);
-}
-
+/* Interactive Cards */
 .interactive-card {
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .interactive-card:hover {
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
 }
 
-/* Interactive card image hover zoom */
 .interactive-card img {
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .interactive-card:hover img {
-  transform: scale(1.04);
+  transform: scale(1.03);
 }
 
 /* Dynamic Scroll Reveal Animations */
 .reveal-on-scroll {
   opacity: 0;
-  transform: translateY(28px);
+  transform: translateY(24px);
   transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }

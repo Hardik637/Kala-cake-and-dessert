@@ -17,10 +17,14 @@ export default function MenuPage() {
     api.getCategories()
       .then((res) => {
         const raw = res.categories && res.categories.length > 0 ? res.categories : [
-          { id: 1, name: 'Cakes', slug: 'cakes' },
-          { id: 2, name: 'Dessert Tub', slug: 'dessert-tub' },
-          { id: 3, name: 'Brownies', slug: 'brownies' },
-          { id: 4, name: 'Cookies', slug: 'cookies' },
+          { id: 1, name: 'Baked Cheesecakes', slug: 'baked-cheesecakes' },
+          { id: 2, name: 'Brownies', slug: 'brownies' },
+          { id: 3, name: 'Cookies', slug: 'cookies' },
+          { id: 4, name: 'Desserts', slug: 'desserts' },
+          { id: 5, name: 'Healthy Bakes', slug: 'healthy-bakes' },
+          { id: 6, name: 'Teacakes', slug: 'teacakes' },
+          { id: 7, name: 'Dessert Tubs', slug: 'dessert-tubs' },
+          { id: 8, name: 'Cookie Tin', slug: 'cookie-tin' },
         ];
         const unique = [];
         const seen = new Set();
@@ -35,10 +39,14 @@ export default function MenuPage() {
       .catch((err) => {
         console.error('Failed to load categories:', err);
         setCategories([
-          { id: 1, name: 'Cakes', slug: 'cakes' },
-          { id: 2, name: 'Dessert Tub', slug: 'dessert-tub' },
-          { id: 3, name: 'Brownies', slug: 'brownies' },
-          { id: 4, name: 'Cookies', slug: 'cookies' },
+          { id: 1, name: 'Baked Cheesecakes', slug: 'baked-cheesecakes' },
+          { id: 2, name: 'Brownies', slug: 'brownies' },
+          { id: 3, name: 'Cookies', slug: 'cookies' },
+          { id: 4, name: 'Desserts', slug: 'desserts' },
+          { id: 5, name: 'Healthy Bakes', slug: 'healthy-bakes' },
+          { id: 6, name: 'Teacakes', slug: 'teacakes' },
+          { id: 7, name: 'Dessert Tubs', slug: 'dessert-tubs' },
+          { id: 8, name: 'Cookie Tin', slug: 'cookie-tin' },
         ]);
       });
   }, []);
@@ -62,7 +70,7 @@ export default function MenuPage() {
           <span className="section-eyebrow">Our Menu</span>
           <h1 className="section-title">Fresh Cakes & Desserts</h1>
           <p className="section-subtitle">
-            Order your favorite cakes, dessert tubs, brownies, and cookies online.
+            Order your favorite baked cheesecakes, brownies, cookies, teacakes, and desserts online.
           </p>
         </div>
 
@@ -80,7 +88,7 @@ export default function MenuPage() {
           <div style={{ maxWidth: '480px', margin: '0 auto', width: '100%', position: 'relative' }}>
             <input
               type="text"
-              placeholder="Search cakes, dessert tubs, brownies, cookies..."
+              placeholder="Search baked cheesecakes, brownies, cookies, desserts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"

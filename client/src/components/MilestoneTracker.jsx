@@ -17,7 +17,7 @@ export default function MilestoneTracker({ milestone, compact = false }) {
           particleCount: 50,
           spread: 60,
           origin: { y: 0.7 },
-          colors: ['#B86B53', '#C5A059', '#FAF7F2']
+          colors: ['#2B5835', '#EBCACA', '#FAF8F5']
         });
       } catch (e) {
         // Safe fallback
@@ -110,7 +110,7 @@ export default function MilestoneTracker({ milestone, compact = false }) {
       >
         <div>
           <span className="section-eyebrow" style={{ marginBottom: '4px' }}>
-            Kala Rewards
+            Kalã Rewards
           </span>
           <h3 style={{ fontSize: '1.6rem', fontWeight: 700, lineHeight: 1.2 }}>Your Progress</h3>
           <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>

@@ -6,7 +6,7 @@ import { useStoreSettings } from '../context/StoreSettingsContext';
 export default function AboutPage({ setActivePage }) {
   const { settings } = useStoreSettings();
 
-  const brandName = settings?.brand_name || BRAND_CONFIG.name || 'Kala';
+  const brandName = settings?.brand_name || BRAND_CONFIG.name || 'Kalã';
   const brandTagline = settings?.brand_tagline || BRAND_CONFIG.tagline || 'Cakes and Desserts';
   const address = settings?.boutique_address || BRAND_CONFIG.boutiqueAddress || '';
   const hours = settings?.business_hours || BRAND_CONFIG.hours || '';
@@ -59,7 +59,7 @@ export default function AboutPage({ setActivePage }) {
 
           <div style={{ fontSize: '1.05rem', lineHeight: 1.8, color: 'var(--color-text-muted)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <p>
-              {settings?.about_story || 'Kala is a cake and dessert brand focused on making fresh, delicious desserts for everyday celebrations and special occasions.'}
+              {settings?.about_story || 'Kalã is a cake and dessert brand focused on making fresh, delicious desserts for everyday celebrations and special occasions.'}
             </p>
             <p>
               We believe great desserts come from simple, wholesome ingredients and thoughtful preparation. Whether it’s a birthday cake, a decadent brownie box, freshly baked cookies, or an indulgent dessert tub, our goal is to bring joy to your sweet moments.

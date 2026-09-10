@@ -52,7 +52,7 @@ async function initializeFreshFirestore() {
     hero_heading: "Fresh cakes and desserts made for every occasion.",
     hero_subtitle: "Order your favorite cakes, dessert tubs, brownies, and cookies online.",
     hero_image_url: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1200&q=80",
-    about_story: "Kala is a cake and dessert brand focused on making fresh, delicious desserts for everyday celebrations and special occasions. We believe in simple, wholesome ingredients, warm hospitality, and desserts that bring people together.",
+    about_story: "Kalã is a cake and dessert brand focused on making fresh, delicious desserts for everyday celebrations and special occasions. We believe in simple, wholesome ingredients, warm hospitality, and desserts that bring people together.",
     updated_at: now,
   }, { merge: true });
 
@@ -94,10 +94,14 @@ async function initializeFreshFirestore() {
   // 4. Exactly Four Canonical Categories
   console.log('🏷️ 4/5 Seeding 4 Product Categories (Cakes, Dessert Tub, Brownies, Cookies)...');
   const categories = [
-    { id: 1, name: 'Cakes', slug: 'cakes', display_order: 1, is_active: 1 },
-    { id: 2, name: 'Dessert Tub', slug: 'dessert-tub', display_order: 2, is_active: 1 },
-    { id: 3, name: 'Brownies', slug: 'brownies', display_order: 3, is_active: 1 },
-    { id: 4, name: 'Cookies', slug: 'cookies', display_order: 4, is_active: 1 },
+    { id: 1, name: 'Baked Cheesecakes', slug: 'baked-cheesecakes', display_order: 1, is_active: 1 },
+    { id: 2, name: 'Brownies', slug: 'brownies', display_order: 2, is_active: 1 },
+    { id: 3, name: 'Cookies', slug: 'cookies', display_order: 3, is_active: 1 },
+    { id: 4, name: 'Desserts', slug: 'desserts', display_order: 4, is_active: 1 },
+    { id: 5, name: 'Healthy Bakes', slug: 'healthy-bakes', display_order: 5, is_active: 1 },
+    { id: 6, name: 'Teacakes', slug: 'teacakes', display_order: 6, is_active: 1 },
+    { id: 7, name: 'Dessert Tubs', slug: 'dessert-tubs', display_order: 7, is_active: 1 },
+    { id: 8, name: 'Cookie Tin', slug: 'cookie-tin', display_order: 8, is_active: 1 },
   ];
 
   for (const cat of categories) {

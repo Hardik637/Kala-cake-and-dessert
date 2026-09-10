@@ -25,7 +25,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const brandName = settings?.brand_name || BRAND_CONFIG.name || 'Kala';
+  const brandName = settings?.brand_name || BRAND_CONFIG.name || 'Kalã';
   const brandTagline = settings?.brand_tagline || BRAND_CONFIG.tagline || 'Cakes and Desserts';
 
   const heroSubtitle = settings?.hero_subtitle || 'Order your favorite cakes, dessert tubs, brownies, and cookies online, or talk to us for custom celebration cakes.';
@@ -85,9 +85,9 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
         className="hero-section"
         style={{
           position: 'relative',
-          backgroundColor: '#FAF7F2',
-          backgroundImage: `radial-gradient(#E8DFD3 1px, transparent 1px)`,
-          backgroundSize: '24px 24px',
+          backgroundColor: 'var(--color-bg)',
+          
+          
           padding: 'clamp(44px, 8vw, 84px) 0',
           width: '100%',
           boxSizing: 'border-box',
@@ -95,8 +95,8 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
         }}
       >
         {/* Dynamic Glow Orbs */}
-        <div className="glow-orb glow-orb-primary" style={{ width: '420px', height: '420px', top: '-60px', left: '-100px' }} />
-        <div className="glow-orb glow-orb-gold" style={{ width: '380px', height: '380px', bottom: '-50px', right: '-80px' }} />
+        
+        
 
         <div className="container" style={{ padding: '0 16px', boxSizing: 'border-box', position: 'relative', zIndex: 1 }}>
           <div
@@ -115,16 +115,16 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '7px 16px',
-                  background: 'var(--color-surface-warm)',
+                  background: 'var(--color-pink-subtle)',
                   borderRadius: 'var(--radius-full)',
                   marginBottom: '18px',
-                  border: '1px solid var(--color-border)',
+                  border: '1px solid var(--color-pink-border)',
                   boxShadow: 'var(--shadow-sm)',
                 }}
               >
-                <Sparkles size={14} color="var(--color-accent)" />
-                <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--color-accent)' }}>
-                  {brandName} • <span className="font-script" style={{ textTransform: 'none', fontSize: '1.25em', letterSpacing: 0, color: 'var(--color-accent)' }}>Made with love</span>
+                <Sparkles size={14} color="var(--color-primary)" />
+                <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700, color: 'var(--color-primary)' }}>
+                  {brandName} • <span className="font-script" style={{ textTransform: 'none', fontSize: '1.25em', letterSpacing: 0, color: 'var(--color-primary)' }}>Made with love</span>
                 </span>
               </div>
 
@@ -263,7 +263,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
               Shop by <span className="script-accent">Category</span>
             </h2>
             <p className="section-subtitle">
-              Choose your favorite fresh bake from our four simple categories.
+              Choose your favorite fresh bake from our eight handcrafted categories.
             </p>
           </div>
 
@@ -305,7 +305,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
                   <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '14px', lineHeight: 1.4, flexGrow: 1 }}>
                     {cat.desc}
                   </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-accent)', fontSize: '0.88rem', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', fontSize: '0.88rem', fontWeight: 600 }}>
                     <span>Browse {cat.title}</span>
                     <ArrowRight size={15} />
                   </div>
@@ -388,7 +388,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
                 }}
               >
                 <Sparkles size={14} color="var(--color-accent)" />
-                <span>Handcrafted with <span className="font-script" style={{ fontSize: '1.25em', color: 'var(--color-accent)' }}>Love</span></span>
+                <span>Handcrafted with <span className="font-script" style={{ fontSize: '1.25em', color: 'var(--color-primary)' }}>Love</span></span>
               </div>
             </div>
           </div>
@@ -410,7 +410,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
           <div className="section-header" style={{ marginBottom: '32px' }}>
             <span className="section-eyebrow">Customer Loyalty</span>
             <h2 className="section-title">
-              Kala <span className="script-accent">Rewards</span>
+              Kalã <span className="script-accent">Rewards</span>
             </h2>
             <p className="section-subtitle">
               Every delivered order counts toward complimentary treats.
@@ -437,7 +437,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
                   height: '56px',
                   borderRadius: '50%',
                   background: 'var(--color-surface-warm)',
-                  color: 'var(--color-accent)',
+                  color: 'var(--color-primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -446,7 +446,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
               >
                 <Gift size={28} />
               </div>
-              <h3 style={{ fontSize: '1.45rem', marginBottom: '8px', fontWeight: 600 }}>Join Kala Rewards</h3>
+              <h3 style={{ fontSize: '1.45rem', marginBottom: '8px', fontWeight: 600 }}>Join Kalã Rewards</h3>
               <p style={{ color: 'var(--color-text-muted)', marginBottom: '24px', maxWidth: '480px', margin: '0 auto 24px auto', fontSize: '0.95rem', lineHeight: 1.6 }}>
                 Sign in with your Google account to start earning rewards with every delivered order.
               </p>
@@ -469,7 +469,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
             Our Story
           </span>
           <h2 className="section-title" style={{ marginBottom: '16px' }}>
-            About <span className="script-accent">Kala</span>
+            About <span className="script-accent">Kalã</span>
           </h2>
           <p
             style={{
@@ -479,7 +479,7 @@ export default function HomePage({ setActivePage, onOpenAuth }) {
               marginBottom: '28px',
             }}
           >
-            {settings?.about_story || 'Kala is a cake and dessert brand focused on making fresh, delicious desserts for everyday celebrations and special occasions. We believe in simple, wholesome ingredients, warm hospitality, and desserts that bring people together.'}
+            {settings?.about_story || 'Kalã is a cake and dessert brand focused on making fresh, delicious desserts for everyday celebrations and special occasions. We believe in simple, wholesome ingredients, warm hospitality, and desserts that bring people together.'}
           </p>
           <button
             onClick={() => { setActivePage('about'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}

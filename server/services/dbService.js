@@ -369,7 +369,16 @@ exports.getCategories = async () => {
   const db = getDb();
   const snap = await db.collection(COLLECTIONS.CATEGORIES).get();
   const list = snapshotToArray(snap);
-  const canonicalSlugs = ['cakes', 'dessert-tub', 'brownies', 'cookies'];
+  const canonicalSlugs = [
+    'baked-cheesecakes',
+    'brownies',
+    'cookies',
+    'desserts',
+    'healthy-bakes',
+    'teacakes',
+    'dessert-tubs',
+    'cookie-tin'
+  ];
   
   const slugMap = new Map();
   for (const c of list) {
@@ -379,10 +388,14 @@ exports.getCategories = async () => {
   }
 
   const canonicalDefaults = {
-    'cakes': { slug: 'cakes', name: 'Cakes', description: 'Fresh layer cakes for every occasion', display_order: 1 },
-    'dessert-tub': { slug: 'dessert-tub', name: 'Dessert Tub', description: 'Layered dessert tubs ready to spoon', display_order: 2 },
-    'brownies': { slug: 'brownies', name: 'Brownies', description: 'Rich, fudgy chocolate brownies', display_order: 3 },
-    'cookies': { slug: 'cookies', name: 'Cookies', description: 'Freshly baked artisanal cookies', display_order: 4 },
+    'baked-cheesecakes': { id: 1, slug: 'baked-cheesecakes', name: 'Baked Cheesecakes', description: 'Rich, creamy slow-baked cheesecakes', display_order: 1 },
+    'brownies': { id: 2, slug: 'brownies', name: 'Brownies', description: 'Rich, fudgy chocolate brownies', display_order: 2 },
+    'cookies': { id: 3, slug: 'cookies', name: 'Cookies', description: 'Freshly baked artisanal cookies', display_order: 3 },
+    'desserts': { id: 4, slug: 'desserts', name: 'Desserts', description: 'Handcrafted specialty dessert creations', display_order: 4 },
+    'healthy-bakes': { id: 5, slug: 'healthy-bakes', name: 'Healthy Bakes', description: 'Wholesome, nourishing artisanal bakes', display_order: 5 },
+    'teacakes': { id: 6, slug: 'teacakes', name: 'Teacakes', description: 'Delicate tea-time loafs & fragrant slices', display_order: 6 },
+    'dessert-tubs': { id: 7, slug: 'dessert-tubs', name: 'Dessert Tubs', description: 'Layered dessert tubs ready to spoon', display_order: 7 },
+    'cookie-tin': { id: 8, slug: 'cookie-tin', name: 'Cookie Tin', description: 'Curated assorted cookie gift tins', display_order: 8 },
   };
 
   return canonicalSlugs.map(slug => slugMap.get(slug) || canonicalDefaults[slug]);

@@ -3,14 +3,15 @@
 // not these fallback presentation constants.
 
 module.exports = {
-  BRAND_NAME: "Kala",
+  BRAND_NAME: "Kalã",
   TAGLINE: "Cakes and Desserts",
   CURRENCY_SYMBOL: "₹",
   CONTACT_EMAIL: "",
   CONTACT_PHONE: "",
   BOUTIQUE_ADDRESS: "",
   BUSINESS_HOURS: "",
-  INSTAGRAM_HANDLE: "",
+  INSTAGRAM_HANDLE: "@kala_cakesanddesserts",
+  INSTAGRAM_URL: "https://www.instagram.com/kala_cakesanddesserts/",
   DEFAULT_DELIVERY_FEE: 50.0,
   PICKUP_ENABLED: 1,
   DEFAULT_MILESTONE_REQUIRED_ORDERS: 10,

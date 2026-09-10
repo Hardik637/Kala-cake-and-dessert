@@ -175,7 +175,7 @@ export default function AdminCustomersPage() {
             )}
 
             {/* Milestones Section */}
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '12px' }}>Kala Reward Milestones</h3>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '12px' }}>Kalã Reward Milestones</h3>
             <div style={{ marginBottom: '24px', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead style={{ background: 'var(--color-surface-warm)' }}>

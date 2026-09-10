@@ -24,7 +24,7 @@ export default function RewardsPage({ setActivePage, onOpenAuth }) {
     }
   }, [isCustomerAuthenticated, customerToken]);
 
-  const brandName = settings?.brand_name || BRAND_CONFIG.name || 'Kala';
+  const brandName = settings?.brand_name || BRAND_CONFIG.name || 'Kalã';
   const displayedMilestone = rewardData?.activeMilestone || customerMilestone;
   const requiredOrders = displayedMilestone?.required_orders || 10;
   const completedOrders = displayedMilestone?.completed_orders || 0;
@@ -37,7 +37,7 @@ export default function RewardsPage({ setActivePage, onOpenAuth }) {
         {/* Header */}
         <div className="section-header" style={{ marginBottom: '32px' }}>
           <span className="section-eyebrow">Customer Rewards</span>
-          <h1 className="section-title">Kala Rewards</h1>
+          <h1 className="section-title">Kalã Rewards</h1>
           <p className="section-subtitle">
             Complete orders and unlock rewards. Every delivered order brings you closer to complimentary treats.
           </p>
@@ -86,7 +86,7 @@ export default function RewardsPage({ setActivePage, onOpenAuth }) {
                 <Award size={30} />
               </div>
               <h2 style={{ fontSize: '1.6rem', marginBottom: '10px', fontWeight: 700 }}>
-                Join Kala Rewards
+                Join Kalã Rewards
               </h2>
               <p style={{ maxWidth: '520px', margin: '0 auto 24px auto', color: 'var(--color-text-muted)', lineHeight: 1.6, fontSize: '0.95rem' }}>
                 Every delivered order brings you closer to your {rewardName}. Sign in with your Google account to start your {requiredOrders}-order cycle.
