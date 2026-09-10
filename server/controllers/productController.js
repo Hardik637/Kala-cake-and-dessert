@@ -17,7 +17,10 @@ exports.getProducts = async (req, res) => {
       const q = search.trim().toLowerCase();
       products = products.filter(p =>
         (p.name && p.name.toLowerCase().includes(q)) ||
-        (p.description && p.description.toLowerCase().includes(q))
+        (p.description && p.description.toLowerCase().includes(q)) ||
+        (p.category_name && p.category_name.toLowerCase().includes(q)) ||
+        (p.category_slug && p.category_slug.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q))
       );
     }
 

@@ -101,9 +101,12 @@ export default function CartDrawer({ onProceedCheckout, onExploreMenu }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {items.map((item) => {
                 const prod = item.product || item;
+                const itemKey = item.key || prod.id;
+                const unitPrice = item.unit_price !== undefined ? item.unit_price : Number(prod.price || 0);
+
                 return (
                   <div
-                    key={prod.id}
+                    key={itemKey}
                     style={{
                       display: 'flex',
                       gap: '12px',
@@ -113,7 +116,8 @@ export default function CartDrawer({ onProceedCheckout, onExploreMenu }) {
                     }}
                   >
                     <img
-                      src={prod.image_url}
+                      src={prod.image_url || '/placeholder.jpg'}
+                      onError={(e) => { e.currentTarget.src = '/placeholder.jpg'; }}
                       alt={prod.name}
                       style={{
                         width: '64px',
@@ -128,8 +132,18 @@ export default function CartDrawer({ onProceedCheckout, onExploreMenu }) {
                       <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {prod.name}
                       </h4>
+                      {item.selected_variant && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--color-primary)', fontWeight: 600, marginBottom: '2px' }}>
+                          Option: {item.selected_variant.name || item.selected_variant}
+                        </div>
+                      )}
+                      {item.selected_topping && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginBottom: '2px' }}>
+                          Topping: {item.selected_topping}
+                        </div>
+                      )}
                       <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-accent)', marginBottom: '8px' }}>
-                        {BRAND_CONFIG.currency}{(Number(prod.price) * item.quantity).toFixed(0)}
+                        {BRAND_CONFIG.currency}{(unitPrice * item.quantity).toFixed(0)}
                       </div>
 
                       {/* Quantity Controls */}
@@ -144,7 +158,7 @@ export default function CartDrawer({ onProceedCheckout, onExploreMenu }) {
                           }}
                         >
                           <button
-                            onClick={() => updateQuantity(prod.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(itemKey, item.quantity - 1)}
                             style={{
                               width: '28px',
                               height: '28px',
@@ -165,7 +179,7 @@ export default function CartDrawer({ onProceedCheckout, onExploreMenu }) {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(prod.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(itemKey, item.quantity + 1)}
                             style={{
                               width: '28px',
                               height: '28px',
@@ -185,7 +199,7 @@ export default function CartDrawer({ onProceedCheckout, onExploreMenu }) {
                         </div>
 
                         <button
-                          onClick={() => removeFromCart(prod.id)}
+                          onClick={() => removeFromCart(itemKey)}
                           style={{
                             border: 'none',
                             background: 'none',

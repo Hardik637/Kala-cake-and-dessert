@@ -186,8 +186,15 @@ export default function OrderTrackingPage({ trackOrderId, setActivePage }) {
                       borderBottom: '1px solid var(--color-border)',
                     }}
                   >
-                    <span>{i.product_name || i.name} <span style={{ color: 'var(--color-text-muted)' }}>× {i.quantity}</span></span>
-                    <span style={{ fontWeight: 600 }}>{currencySymbol}{Number(i.item_total || i.unit_price * i.quantity).toFixed(0)}</span>
+                    <div>
+                      <span>{i.product_name || i.name} <span style={{ color: 'var(--color-text-muted)' }}>× {i.quantity}</span></span>
+                      {(i.variant_name || i.selected_topping) && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                          {[i.variant_name, i.selected_topping].filter(Boolean).join(' • ')}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontWeight: 600 }}>{currencySymbol}{Number(i.total_price || i.item_total || (i.unit_price || 0) * i.quantity).toFixed(0)}</span>
                   </div>
                 ))}
               </div>

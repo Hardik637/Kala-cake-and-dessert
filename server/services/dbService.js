@@ -374,6 +374,7 @@ exports.getCategories = async () => {
     'brownies',
     'cookies',
     'desserts',
+    'gifting',
     'healthy-bakes',
     'teacakes',
     'dessert-tubs',
@@ -392,10 +393,11 @@ exports.getCategories = async () => {
     'brownies': { id: 2, slug: 'brownies', name: 'Brownies', description: 'Rich, fudgy chocolate brownies', display_order: 2 },
     'cookies': { id: 3, slug: 'cookies', name: 'Cookies', description: 'Freshly baked artisanal cookies', display_order: 3 },
     'desserts': { id: 4, slug: 'desserts', name: 'Desserts', description: 'Handcrafted specialty dessert creations', display_order: 4 },
-    'healthy-bakes': { id: 5, slug: 'healthy-bakes', name: 'Healthy Bakes', description: 'Wholesome, nourishing artisanal bakes', display_order: 5 },
-    'teacakes': { id: 6, slug: 'teacakes', name: 'Teacakes', description: 'Delicate tea-time loafs & fragrant slices', display_order: 6 },
-    'dessert-tubs': { id: 7, slug: 'dessert-tubs', name: 'Dessert Tubs', description: 'Layered dessert tubs ready to spoon', display_order: 7 },
-    'cookie-tin': { id: 8, slug: 'cookie-tin', name: 'Cookie Tin', description: 'Curated assorted cookie gift tins', display_order: 8 },
+    'gifting': { id: 5, slug: 'gifting', name: 'Gifting', description: 'Curated dessert boxes and artisanal gift hampers', display_order: 5 },
+    'healthy-bakes': { id: 6, slug: 'healthy-bakes', name: 'Healthy Bakes', description: 'Wholesome, nourishing artisanal bakes', display_order: 6 },
+    'teacakes': { id: 7, slug: 'teacakes', name: 'Teacakes', description: 'Delicate tea-time loafs & fragrant slices', display_order: 7 },
+    'dessert-tubs': { id: 8, slug: 'dessert-tubs', name: 'Dessert Tubs', description: 'Layered dessert tubs ready to spoon', display_order: 8 },
+    'cookie-tin': { id: 9, slug: 'cookie-tin', name: 'Cookie Tin', description: 'Curated assorted cookie gift tins', display_order: 9 },
   };
 
   return canonicalSlugs.map(slug => slugMap.get(slug) || canonicalDefaults[slug]);

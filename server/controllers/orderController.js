@@ -89,7 +89,33 @@ exports.placeOrder = async (req, res) => {
         return res.status(400).json({ error: `Please enter a valid quantity (1-50) for "${product.name}".` });
       }
 
-      const unitPrice = Number(product.price);
+      // Server-authoritative unit price computation
+      let unitPrice = Number(product.price);
+      let variantName = null;
+      let selectedTopping = item.selected_topping ? String(item.selected_topping).trim().slice(0, 50) : null;
+
+      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+        if (!item.selected_variant) {
+          // If customer did not pass selected_variant, use first variant as baseline
+          const defaultVariant = product.variants[0];
+          unitPrice = Number(defaultVariant.price);
+          variantName = defaultVariant.name;
+        } else {
+          // Match by id or name (case-insensitive)
+          const candidate = String(item.selected_variant).trim().toLowerCase();
+          const matchedVariant = product.variants.find(v => 
+            String(v.id).toLowerCase() === candidate ||
+            String(v.name).toLowerCase() === candidate
+          );
+          if (matchedVariant) {
+            unitPrice = Number(matchedVariant.price);
+            variantName = matchedVariant.name;
+          } else {
+            return res.status(400).json({ error: `Invalid option selected for "${product.name}".` });
+          }
+        }
+      }
+
       const itemTotal = unitPrice * quantity;
       subtotal += itemTotal;
 
@@ -97,6 +123,8 @@ exports.placeOrder = async (req, res) => {
       orderItems.push({
         product_id: product.id,
         product_name: product.name,
+        variant_name: variantName,
+        selected_topping: selectedTopping,
         quantity,
         unit_price: unitPrice,
         total_price: itemTotal,

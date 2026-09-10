@@ -1,22 +1,46 @@
-import React, { useState } from 'react';
-import { X, Plus, Minus, ShoppingBag } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Minus, ShoppingBag, Check } from 'lucide-react';
 import { BRAND_CONFIG } from '../config/brand';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 
 export default function ProductModal({ product, onClose }) {
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedTopping, setSelectedTopping] = useState(null);
+
   const { addToCart } = useCart();
   const { addToast } = useToast();
+
+  useEffect(() => {
+    if (product) {
+      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+        setSelectedVariant(product.variants[0]);
+      } else {
+        setSelectedVariant(null);
+      }
+
+      if (product.toppings && Array.isArray(product.toppings) && product.toppings.length > 0) {
+        setSelectedTopping(product.toppings[0]);
+      } else {
+        setSelectedTopping(null);
+      }
+      setQuantity(1);
+    }
+  }, [product]);
 
   if (!product) return null;
 
   const isSoldOut = product.available === 0;
+  const currentUnitPrice = selectedVariant && selectedVariant.price !== undefined 
+    ? Number(selectedVariant.price) 
+    : Number(product.price);
 
   const handleAdd = () => {
     if (isSoldOut) return;
-    addToCart(product, quantity);
-    addToast(`Added ${quantity} × ${product.name} to your cart.`, 'success');
+    addToCart(product, quantity, selectedVariant, selectedTopping);
+    const variantLabel = selectedVariant ? ` (${selectedVariant.name})` : '';
+    addToast(`Added ${quantity} × ${product.name}${variantLabel} to your cart.`, 'success');
     onClose();
   };
 
@@ -81,7 +105,8 @@ export default function ProductModal({ product, onClose }) {
           {/* Product Image Column */}
           <div style={{ position: 'relative', minHeight: '260px', maxHeight: '340px', background: 'var(--color-surface-warm)' }}>
             <img
-              src={product.image_url}
+              src={product.image_url || '/placeholder.jpg'}
+              onError={(e) => { e.currentTarget.src = '/placeholder.jpg'; }}
               alt={product.name}
               style={{
                 width: '100%',
@@ -110,52 +135,138 @@ export default function ProductModal({ product, onClose }) {
 
           {/* Product Details Column */}
           <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-            <span className="product-category-tag" style={{ marginBottom: '6px' }}>
-              {product.category_name || 'Dessert'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+              <span className="product-category-tag">
+                {product.category_name || product.category || 'Dessert'}
+              </span>
+              {product.size && (
+                <span style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--color-text-muted)', background: 'var(--color-surface-warm)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
+                  {product.size}
+                </span>
+              )}
+              {Boolean(product.is_eggless) && (
+                <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#2B5835', background: '#EAF3EC', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
+                  Eggless
+                </span>
+              )}
+              {Boolean(product.no_refined_sugar) && (
+                <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#2B5835', background: '#EAF3EC', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
+                  No Refined Sugar
+                </span>
+              )}
+              {Boolean(product.no_maida) && (
+                <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#2B5835', background: '#EAF3EC', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
+                  No Maida
+                </span>
+              )}
+              {Boolean(product.alcohol_free) && (
+                <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#2B5835', background: '#EAF3EC', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
+                  Alcohol Free
+                </span>
+              )}
+            </div>
 
             <h2 style={{ fontSize: '1.65rem', marginBottom: '8px', lineHeight: 1.25 }}>{product.name}</h2>
 
             <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '14px' }}>
-              {BRAND_CONFIG.currency}{Number(product.price).toFixed(0)}
+              {BRAND_CONFIG.currency}{currentUnitPrice.toFixed(0)}
             </div>
 
-            <p style={{ fontSize: '0.92rem', color: 'var(--color-text-muted)', lineHeight: 1.6, marginBottom: '20px' }}>
-              {product.description}
-            </p>
+            {product.description && (
+              <p style={{ fontSize: '0.92rem', color: 'var(--color-text-muted)', lineHeight: 1.6, marginBottom: '16px' }}>
+                {product.description}
+              </p>
+            )}
 
-            {/* Specifications */}
-            {(product.serving_size || product.ingredients || product.allergens) && (
+            {/* Product Variants (Options / Packs) */}
+            {product.variants && Array.isArray(product.variants) && product.variants.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-main)', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Select Option
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {product.variants.map((v) => {
+                    const isSelected = selectedVariant?.id === v.id || selectedVariant?.name === v.name;
+                    return (
+                      <button
+                        key={v.id || v.name}
+                        type="button"
+                        onClick={() => setSelectedVariant(v)}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: 'var(--radius-full)',
+                          border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                          background: isSelected ? 'var(--color-surface-warm)' : '#FFFFFF',
+                          color: isSelected ? 'var(--color-primary)' : 'var(--color-text-main)',
+                          fontWeight: isSelected ? 700 : 500,
+                          fontSize: '0.84rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        {isSelected && <Check size={14} color="var(--color-primary)" />}
+                        <span>{v.name} — {BRAND_CONFIG.currency}{v.price}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Product Toppings */}
+            {product.toppings && Array.isArray(product.toppings) && product.toppings.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-main)', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Select Topping / Flavor
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {product.toppings.map((t) => {
+                    const isSelected = selectedTopping === t;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setSelectedTopping(t)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 'var(--radius-full)',
+                          border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                          background: isSelected ? 'var(--color-surface-warm)' : '#FFFFFF',
+                          color: isSelected ? 'var(--color-primary)' : 'var(--color-text-main)',
+                          fontWeight: isSelected ? 700 : 500,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        {isSelected && <Check size={13} color="var(--color-primary)" />}
+                        <span>{t}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Serving Information */}
+            {product.serves && (
               <div
                 style={{
                   background: 'var(--color-surface-warm)',
                   borderRadius: '8px',
-                  padding: '14px',
-                  marginBottom: '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
+                  padding: '10px 14px',
+                  marginBottom: '16px',
                   fontSize: '0.84rem',
                 }}
               >
-                {product.serving_size && (
-                  <div>
-                    <strong style={{ color: 'var(--color-text-main)' }}>Serving: </strong>
-                    <span style={{ color: 'var(--color-text-muted)' }}>{product.serving_size}</span>
-                  </div>
-                )}
-                {product.ingredients && (
-                  <div>
-                    <strong style={{ color: 'var(--color-text-main)' }}>Ingredients: </strong>
-                    <span style={{ color: 'var(--color-text-muted)' }}>{product.ingredients}</span>
-                  </div>
-                )}
-                {product.allergens && (
-                  <div>
-                    <strong style={{ color: 'var(--color-accent)' }}>Allergens: </strong>
-                    <span style={{ color: 'var(--color-text-muted)' }}>{product.allergens}</span>
-                  </div>
-                )}
+                <strong style={{ color: 'var(--color-text-main)' }}>Serves: </strong>
+                <span style={{ color: 'var(--color-text-muted)' }}>{product.serves}</span>
               </div>
             )}
 
@@ -245,7 +356,7 @@ export default function ProductModal({ product, onClose }) {
                     }}
                   >
                     <ShoppingBag size={18} />
-                    <span>Add to Cart — {BRAND_CONFIG.currency}{(Number(product.price) * quantity).toFixed(0)}</span>
+                    <span>Add to Cart — {BRAND_CONFIG.currency}{(currentUnitPrice * quantity).toFixed(0)}</span>
                   </button>
                 </div>
               )}

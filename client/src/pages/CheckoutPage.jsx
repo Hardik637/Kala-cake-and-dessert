@@ -69,6 +69,8 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
         items: items.map((i) => ({
           product_id: i.product?.id || i.id,
           quantity: i.quantity,
+          selected_variant: i.selected_variant ? (i.selected_variant.id || i.selected_variant.name || i.selected_variant) : null,
+          selected_topping: i.selected_topping || null,
         })),
       };
 

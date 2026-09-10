@@ -21,10 +21,11 @@ export default function MenuPage() {
           { id: 2, name: 'Brownies', slug: 'brownies' },
           { id: 3, name: 'Cookies', slug: 'cookies' },
           { id: 4, name: 'Desserts', slug: 'desserts' },
-          { id: 5, name: 'Healthy Bakes', slug: 'healthy-bakes' },
-          { id: 6, name: 'Teacakes', slug: 'teacakes' },
-          { id: 7, name: 'Dessert Tubs', slug: 'dessert-tubs' },
-          { id: 8, name: 'Cookie Tin', slug: 'cookie-tin' },
+          { id: 5, name: 'Gifting', slug: 'gifting' },
+          { id: 6, name: 'Healthy Bakes', slug: 'healthy-bakes' },
+          { id: 7, name: 'Teacakes', slug: 'teacakes' },
+          { id: 8, name: 'Dessert Tubs', slug: 'dessert-tubs' },
+          { id: 9, name: 'Cookie Tin', slug: 'cookie-tin' },
         ];
         const unique = [];
         const seen = new Set();
@@ -43,10 +44,11 @@ export default function MenuPage() {
           { id: 2, name: 'Brownies', slug: 'brownies' },
           { id: 3, name: 'Cookies', slug: 'cookies' },
           { id: 4, name: 'Desserts', slug: 'desserts' },
-          { id: 5, name: 'Healthy Bakes', slug: 'healthy-bakes' },
-          { id: 6, name: 'Teacakes', slug: 'teacakes' },
-          { id: 7, name: 'Dessert Tubs', slug: 'dessert-tubs' },
-          { id: 8, name: 'Cookie Tin', slug: 'cookie-tin' },
+          { id: 5, name: 'Gifting', slug: 'gifting' },
+          { id: 6, name: 'Healthy Bakes', slug: 'healthy-bakes' },
+          { id: 7, name: 'Teacakes', slug: 'teacakes' },
+          { id: 8, name: 'Dessert Tubs', slug: 'dessert-tubs' },
+          { id: 9, name: 'Cookie Tin', slug: 'cookie-tin' },
         ]);
       });
   }, []);

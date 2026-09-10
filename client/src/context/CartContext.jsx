@@ -18,34 +18,57 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('patisserie_cart', JSON.stringify(items));
   }, [items]);
 
-  const addToCart = (product, quantity = 1) => {
+  const getItemKey = (productId, selectedVariant, selectedTopping) => {
+    const varKey = selectedVariant ? (selectedVariant.id || selectedVariant.name || String(selectedVariant)) : 'default';
+    const topKey = selectedTopping ? String(selectedTopping) : 'none';
+    return `${productId}-${varKey}-${topKey}`;
+  };
+
+  const addToCart = (product, quantity = 1, selectedVariant = null, selectedTopping = null) => {
     if (!product || product.available === 0) return;
+    const unitPrice = selectedVariant && selectedVariant.price !== undefined 
+      ? Number(selectedVariant.price) 
+      : Number(product.price);
+    const key = getItemKey(product.id, selectedVariant, selectedTopping);
+
     setItems((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
+      const existingIndex = prev.findIndex((item) => (item.key || item.product?.id || item.id) === key);
+      if (existingIndex !== -1) {
+        return prev.map((item, idx) =>
+          idx === existingIndex
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
-      return [...prev, { product, quantity }];
+      return [
+        ...prev,
+        {
+          key,
+          product,
+          quantity,
+          selected_variant: selectedVariant,
+          selected_topping: selectedTopping,
+          unit_price: unitPrice,
+        },
+      ];
     });
     setIsCartOpen(true);
   };
 
-  const removeFromCart = (productId) => {
-    setItems((prev) => prev.filter((item) => item.product.id !== productId));
+  const removeFromCart = (keyOrId) => {
+    setItems((prev) => prev.filter((item) => (item.key !== keyOrId && item.product?.id !== keyOrId && item.id !== keyOrId)));
   };
 
-  const updateQuantity = (productId, quantity) => {
+  const updateQuantity = (keyOrId, quantity) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(keyOrId);
       return;
     }
     setItems((prev) =>
       prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
+        (item.key === keyOrId || item.product?.id === keyOrId || item.id === keyOrId)
+          ? { ...item, quantity }
+          : item
       )
     );
   };
@@ -55,7 +78,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const subtotal = items.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + (item.unit_price !== undefined ? item.unit_price : Number(item.product?.price || 0)) * item.quantity,
     0
   );
 
