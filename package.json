@@ -1,0 +1,37 @@
+{
+  "name": "kala-cakes-and-desserts",
+  "version": "1.0.0",
+  "description": "Kala — Cakes and Desserts Web Application",
+  "main": "server/index.js",
+  "scripts": {
+    "server": "node server/index.js",
+    "seed": "node server/data/seed.js",
+    "migrate:firebase": "node server/data/migrateToFirebase.js",
+    "init:firebase": "node server/data/initializeFirestore.js",
+    "client": "npm run dev --prefix client",
+    "build": "npm --prefix client install && npm --prefix client run build",
+    "vercel-build": "npm --prefix client install && npm --prefix client run build",
+    "start": "node server/index.js",
+    "test": "node server/test/production_audit_tests.js",
+    "test:isolated": "node server/test/run_emulator_tests.js",
+    "stop": "powershell -Command \"Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }\""
+  },
+  "keywords": [
+    "patisserie",
+    "bakery",
+    "ecommerce",
+    "firestore"
+  ],
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "firebase-admin": "^14.3.0",
+    "google-auth-library": "^11.0.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3"
+  }
+}

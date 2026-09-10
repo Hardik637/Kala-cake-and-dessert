@@ -1,0 +1,215 @@
+@import './variables.css';
+
+/* Responsive Layout Utilities & Breakpoints */
+
+/* Tablet and below (<= 1024px) */
+@media (max-width: 1024px) {
+  :root {
+    --nav-height: 68px;
+  }
+  
+  .admin-layout {
+    flex-direction: column;
+  }
+  
+  .admin-sidebar {
+    width: 100%;
+  }
+
+  .admin-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 16px;
+    gap: 8px;
+  }
+
+  .admin-topbar {
+    padding: 0 16px;
+  }
+
+  .admin-content {
+    padding: 20px 16px;
+  }
+}
+
+/* Navigation breakpoint (<= 860px) */
+@media (max-width: 860px) {
+  .nav-desktop {
+    display: none !important;
+  }
+
+  .mobile-hamburger-btn {
+    display: flex !important;
+  }
+
+  .nav-account-btn .desktop-only {
+    display: none !important;
+  }
+}
+
+/* Standard Mobile & Phablet (<= 768px) */
+@media (max-width: 768px) {
+  .section-spacing {
+    padding: 44px 0;
+  }
+
+  .container {
+    padding: 0 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: block !important;
+  }
+
+  /* Typography fluid adjustments */
+  h1 {
+    font-size: clamp(1.8rem, 6vw, 2.4rem);
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 5vw, 2rem);
+  }
+
+  .section-title {
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    margin-bottom: 10px;
+  }
+
+  .section-subtitle {
+    font-size: 0.95rem;
+  }
+
+  /* Modal responsiveness */
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-card {
+    max-width: 100%;
+    margin: 0;
+    max-height: calc(100vh - 24px);
+  }
+
+  /* Cart Drawer full width on small screens */
+  .drawer-panel {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* Form controls: 16px prevents iOS Safari auto-zoom */
+  input, select, textarea, .form-input, .form-select, .form-textarea {
+    font-size: 16px !important;
+  }
+
+  /* Table scrolling safeguard */
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Pearl tracker scaling */
+  .pearl-track {
+    gap: 4px;
+    padding: 8px 10px;
+  }
+
+  .pearl-node {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Small Mobile (<= 480px) */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 14px;
+  }
+
+  .section-spacing {
+    padding: 36px 0;
+  }
+
+  /* Product Card on mobile */
+  .product-content {
+    padding: 14px;
+  }
+
+  .product-title {
+    font-size: 1.1rem;
+  }
+
+  .product-price {
+    font-size: 1.05rem;
+  }
+
+  .product-footer .btn {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+
+  /* Modal on compact mobile */
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  .modal-card {
+    border-radius: var(--radius-sm);
+    max-height: calc(100vh - 16px);
+  }
+
+  /* Buttons stack where needed */
+  .btn-group-mobile-stack {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .btn-group-mobile-stack .btn {
+    width: 100% !important;
+  }
+}
+
+/* Very Small Mobile - 320px to 360px (iPhone SE 1st gen, small Androids) */
+@media (max-width: 360px) {
+  .container {
+    padding: 0 10px;
+  }
+
+  h1 {
+    font-size: 1.65rem;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.82rem;
+  }
+
+  .category-pill {
+    padding: 8px 14px;
+    font-size: 0.82rem;
+  }
+
+  .pearl-node {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Desktop utility */
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
