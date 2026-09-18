@@ -311,6 +311,44 @@ export default function AdminOrdersPage() {
               </div>
             )}
 
+            {/* Payment Details */}
+            <div style={{ background: '#F8F9FA', border: '1px solid var(--color-border)', padding: '14px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.88rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                <div>
+                  <strong>Payment Method: </strong>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-main)' }}>
+                    {inspectOrder.order.payment_method === 'COD' ? 'Cash on Delivery (COD)' : `${inspectOrder.order.payment_method || 'UPI'} (Razorpay)`}
+                  </span>
+                </div>
+                <div>
+                  <strong>Payment Status: </strong>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-full)',
+                      fontWeight: 700,
+                      fontSize: '0.75rem',
+                      background: inspectOrder.order.payment_status === 'PAID' ? '#EAF3EC' : inspectOrder.order.payment_status === 'COD_PENDING' ? '#FEF3C7' : '#FEE2E2',
+                      color: inspectOrder.order.payment_status === 'PAID' ? '#2B5835' : inspectOrder.order.payment_status === 'COD_PENDING' ? '#92400E' : '#991B1B',
+                    }}
+                  >
+                    {inspectOrder.order.payment_status || 'PENDING'}
+                  </span>
+                </div>
+              </div>
+              {inspectOrder.order.payment_reference && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
+                  <strong>Payment ID:</strong> {inspectOrder.order.payment_reference}
+                </div>
+              )}
+              {inspectOrder.order.razorpay_order_id && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>
+                  <strong>Razorpay Order ID:</strong> {inspectOrder.order.razorpay_order_id}
+                </div>
+              )}
+            </div>
+
             {/* Items table */}
             <h4 style={{ fontSize: '1.05rem', marginBottom: '10px' }}>Items</h4>
             <div style={{ border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden', marginBottom: '24px' }}>

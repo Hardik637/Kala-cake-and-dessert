@@ -369,7 +369,7 @@ exports.getRazorpayConfig = async (req, res) => {
 /**
  * Customer: Create Razorpay Order
  * POST /api/orders/razorpay/create-order
- * Recalculates cart total strictly server-side before generating Razorpay order.
+ * Recalculates cart total strictly server-side and saves a server-authoritative payment session.
  */
 exports.createRazorpayOrder = async (req, res) => {
   try {
@@ -377,29 +377,44 @@ exports.createRazorpayOrder = async (req, res) => {
       return res.status(401).json({ error: 'Please sign in to proceed to checkout.' });
     }
 
+    if (!razorpayService.isConfigured()) {
+      return res.status(400).json({ error: 'Online UPI payments are currently undergoing setup. Please select Cash on Delivery to place your order.' });
+    }
+
     const customer = await dbService.getUserById(req.user.id);
     if (!customer) {
       return res.status(401).json({ error: 'Customer profile not found. Please sign in again.' });
     }
 
-    const { items, fulfillment_type, delivery_address } = req.body;
+    const { items, fulfillment_type, delivery_address, pickup_time, notes } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Your shopping bag is empty.' });
+    }
+
+    if (items.length > 50) {
+      return res.status(400).json({ error: 'Maximum 50 items allowed per order.' });
     }
 
     if (!fulfillment_type || !['DELIVERY', 'PICKUP'].includes(fulfillment_type)) {
       return res.status(400).json({ error: 'Please select a valid fulfillment type (DELIVERY or PICKUP).' });
     }
 
-    if (fulfillment_type === 'DELIVERY' && (!delivery_address || typeof delivery_address !== 'string' || delivery_address.trim().length < 5)) {
-      return res.status(400).json({ error: 'Please provide a complete delivery address.' });
+    if (fulfillment_type === 'DELIVERY') {
+      if (!delivery_address || typeof delivery_address !== 'string' || delivery_address.trim().length < 5) {
+        return res.status(400).json({ error: 'Please provide a complete delivery address.' });
+      }
+      if (delivery_address.trim().length > 300) {
+        return res.status(400).json({ error: 'Delivery address is too long (maximum 300 characters).' });
+      }
     }
 
     const settings = await dbService.getStoreSettings();
     const deliveryFee = fulfillment_type === 'DELIVERY' ? Number(settings.default_delivery_fee) : 0.0;
 
     let subtotal = 0;
+    const orderItems = [];
+
     for (const item of items) {
       const productId = item.product_id || item.id;
       if (!productId) return res.status(400).json({ error: 'Invalid product item in bag.' });
@@ -414,118 +429,9 @@ exports.createRazorpayOrder = async (req, res) => {
 
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity <= 0 || quantity > 50) {
-        return res.status(400).json({ error: `Invalid quantity for "${product.name}".` });
+        return res.status(400).json({ error: `Invalid quantity (1-50) for "${product.name}".` });
       }
 
-      let unitPrice = Number(product.price);
-      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
-        if (!item.selected_variant) {
-          unitPrice = Number(product.variants[0].price);
-        } else {
-          const candidate = String(item.selected_variant).trim().toLowerCase();
-          const matched = product.variants.find(v => 
-            String(v.id).toLowerCase() === candidate ||
-            String(v.name).toLowerCase() === candidate
-          );
-          if (matched) {
-            unitPrice = Number(matched.price);
-          } else {
-            return res.status(400).json({ error: `Invalid option selected for "${product.name}".` });
-          }
-        }
-      }
-
-      subtotal += unitPrice * quantity;
-    }
-
-    const totalAmount = subtotal + deliveryFee;
-
-    const razorpayOrder = await razorpayService.createOrder({
-      amount: totalAmount,
-      receipt: `rcpt_${Date.now().toString().slice(-8)}`,
-      notes: {
-        customer_id: String(customer.id),
-        customer_phone: customer.phone || '',
-        customer_email: customer.email || '',
-      },
-    });
-
-    return res.json({
-      success: true,
-      razorpay_order_id: razorpayOrder.razorpay_order_id,
-      amount: razorpayOrder.amount, // in paise
-      currency: razorpayOrder.currency,
-      key_id: razorpayOrder.key_id,
-      mode: razorpayOrder.mode,
-      customer: {
-        name: customer.name || '',
-        email: customer.email || '',
-        phone: customer.phone || '',
-      },
-    });
-  } catch (err) {
-    console.error('Create Razorpay order error:', err.message);
-    return res.status(500).json({ error: 'Failed to initiate payment: ' + err.message });
-  }
-};
-
-/**
- * Customer: Verify Razorpay Payment & Place Order
- * POST /api/orders/razorpay/verify-payment
- */
-exports.verifyRazorpayPayment = async (req, res) => {
-  try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ error: 'Please sign in to complete your order.' });
-    }
-
-    const customer = await dbService.getUserById(req.user.id);
-    if (!customer) {
-      return res.status(401).json({ error: 'Customer profile not found. Please sign in again.' });
-    }
-
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      items,
-      fulfillment_type,
-      delivery_address,
-      pickup_time,
-      notes,
-    } = req.body;
-
-    // Cryptographic signature check
-    const isValidSignature = razorpayService.verifyPaymentSignature({
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-    });
-
-    if (!isValidSignature) {
-      return res.status(400).json({ error: 'Payment signature verification failed. The transaction could not be verified.' });
-    }
-
-    // Validate Items Cart
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Your shopping bag is empty.' });
-    }
-
-    // Recalculate Subtotal Server-Side from Product Database
-    const settings = await dbService.getStoreSettings();
-    const deliveryFee = fulfillment_type === 'DELIVERY' ? Number(settings.default_delivery_fee) : 0.0;
-
-    let subtotal = 0;
-    const orderItems = [];
-
-    for (const item of items) {
-      const productId = item.product_id || item.id;
-      const product = await dbService.getProductById(productId);
-      if (!product || product.is_archived === 1) {
-        return res.status(400).json({ error: `Item "${item.name || 'Dessert'}" is no longer available in our boutique.` });
-      }
-
-      const quantity = parseInt(item.quantity, 10) || 1;
       let unitPrice = Number(product.price);
       let variantName = null;
       let selectedTopping = item.selected_topping ? String(item.selected_topping).trim().slice(0, 50) : null;
@@ -543,6 +449,8 @@ exports.verifyRazorpayPayment = async (req, res) => {
           if (matchedVariant) {
             unitPrice = Number(matchedVariant.price);
             variantName = matchedVariant.name;
+          } else {
+            return res.status(400).json({ error: `Invalid option selected for "${product.name}".` });
           }
         }
       }
@@ -562,38 +470,194 @@ exports.verifyRazorpayPayment = async (req, res) => {
     }
 
     const totalAmount = subtotal + deliveryFee;
+    const amountInPaise = Math.round(totalAmount * 100);
+
+    const razorpayOrder = await razorpayService.createOrder({
+      amount: totalAmount,
+      receipt: `rcpt_${Date.now().toString().slice(-8)}`,
+      notes: {
+        customer_id: String(customer.id),
+        customer_phone: customer.phone || '',
+        customer_email: customer.email || '',
+      },
+    });
 
     const cleanAddress = delivery_address ? delivery_address.trim() : null;
-    if (cleanAddress && !customer.default_address) {
-      await dbService.updateUser(customer.id, { default_address: cleanAddress });
-    }
 
-    // Save order in database with PAID status and Razorpay details
-    const order = await dbService.createOrder({
+    // SAVE TRUSTED SERVER-SIDE PAYMENT SESSION IN FIRESTORE
+    await dbService.createPaymentSession({
+      razorpay_order_id: razorpayOrder.razorpay_order_id,
       user_id: String(customer.id),
-      fulfillment_type,
-      subtotal,
-      delivery_fee: deliveryFee,
-      total_amount: totalAmount,
-      delivery_address: fulfillment_type === 'DELIVERY' ? cleanAddress : null,
-      pickup_time: fulfillment_type === 'PICKUP' ? (pickup_time ? String(pickup_time).trim().slice(0, 100) : 'Standard Boutique Hours') : null,
       customer_name: customer.name,
       customer_email: customer.email,
       customer_phone: customer.phone,
+      items: orderItems,
+      subtotal,
+      delivery_fee: deliveryFee,
+      total_amount: totalAmount,
+      amount_in_paise: amountInPaise,
+      fulfillment_type,
+      delivery_address: fulfillment_type === 'DELIVERY' ? cleanAddress : null,
+      pickup_time: fulfillment_type === 'PICKUP' ? (pickup_time ? String(pickup_time).trim().slice(0, 100) : 'Standard Boutique Hours') : null,
       notes: notes ? String(notes).trim().slice(0, 300) : null,
-      payment_method: 'RAZORPAY_UPI',
+      status: 'INITIATED',
+    });
+
+    return res.json({
+      success: true,
+      razorpay_order_id: razorpayOrder.razorpay_order_id,
+      amount: razorpayOrder.amount, // in paise
+      currency: razorpayOrder.currency,
+      key_id: razorpayOrder.key_id,
+      customer: {
+        name: customer.name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+      },
+    });
+  } catch (err) {
+    console.error('Create Razorpay order error:', err.message);
+    return res.status(500).json({ error: 'Failed to initiate payment: ' + err.message });
+  }
+};
+
+/**
+ * Customer: Verify Razorpay Payment & Place Order
+ * POST /api/orders/razorpay/verify-payment
+ * Strictly constructs the order from the server-authoritative payment session.
+ */
+exports.verifyRazorpayPayment = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Please sign in to complete your order.' });
+    }
+
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ error: 'Missing required Razorpay payment verification details.' });
+    }
+
+    // 1. Retrieve the trusted server-authoritative session
+    const session = await dbService.getPaymentSessionByRazorpayOrderId(razorpay_order_id);
+    if (!session) {
+      return res.status(400).json({ error: 'Payment session not found or has expired. Please try placing your order again.' });
+    }
+
+    // 2. Validate session ownership
+    if (session.user_id !== String(req.user.id)) {
+      return res.status(403).json({ error: 'Payment session does not belong to the authenticated user.' });
+    }
+
+    // 3. Idempotency check: Has an order already been created for this payment?
+    const existingOrderByPayment = await dbService.getOrderByRazorpayPaymentId(razorpay_payment_id);
+    if (existingOrderByPayment) {
+      return res.status(200).json({
+        success: true,
+        message: 'Order was already verified and confirmed.',
+        order: {
+          id: existingOrderByPayment.id,
+          order_number: existingOrderByPayment.order_number,
+          tracking_token: existingOrderByPayment.tracking_token,
+          total_amount: existingOrderByPayment.total_amount,
+          status: existingOrderByPayment.status,
+          payment_status: existingOrderByPayment.payment_status,
+          fulfillment_type: existingOrderByPayment.fulfillment_type,
+          created_at: existingOrderByPayment.created_at,
+          items: existingOrderByPayment.items,
+        },
+      });
+    }
+
+    if (session.status === 'VERIFIED' && session.order_id) {
+      const existingOrder = await dbService.getOrderById(session.order_id);
+      if (existingOrder) {
+        return res.status(200).json({
+          success: true,
+          message: 'Order was already verified and confirmed.',
+          order: {
+            id: existingOrder.id,
+            order_number: existingOrder.order_number,
+            tracking_token: existingOrder.tracking_token,
+            total_amount: existingOrder.total_amount,
+            status: existingOrder.status,
+            payment_status: existingOrder.payment_status,
+            fulfillment_type: existingOrder.fulfillment_type,
+            created_at: existingOrder.created_at,
+            items: existingOrder.items,
+          },
+        });
+      }
+    }
+
+    // 4. Cryptographic HMAC SHA-256 signature verification
+    const isValidSignature = razorpayService.verifyPaymentSignature({
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    });
+
+    if (!isValidSignature) {
+      return res.status(400).json({ error: 'Payment signature verification failed. The transaction could not be verified.' });
+    }
+
+    // 5. Backend amount verification via Razorpay SDK (when live API keys active)
+    const paymentRecord = await razorpayService.fetchPayment(razorpay_payment_id);
+    if (paymentRecord) {
+      if (paymentRecord.order_id && paymentRecord.order_id !== razorpay_order_id) {
+        return res.status(400).json({ error: 'Payment is not associated with this checkout order.' });
+      }
+      if (paymentRecord.amount && Number(paymentRecord.amount) !== Number(session.amount_in_paise)) {
+        return res.status(400).json({ error: 'Payment amount mismatch. Transaction has been flagged for audit.' });
+      }
+    }
+
+    const customer = await dbService.getUserById(req.user.id);
+
+    // Save/update customer default address if opted or missing
+    if (session.delivery_address && customer && !customer.default_address) {
+      await dbService.updateUser(customer.id, { default_address: session.delivery_address });
+    }
+
+    // 6. CREATE ORDER FROM TRUSTED SESSION DATA (Zero reliance on client cart!)
+    const order = await dbService.createOrder({
+      user_id: session.user_id,
+      fulfillment_type: session.fulfillment_type,
+      subtotal: session.subtotal,
+      delivery_fee: session.delivery_fee,
+      total_amount: session.total_amount,
+      delivery_address: session.delivery_address,
+      pickup_time: session.pickup_time,
+      customer_name: session.customer_name,
+      customer_email: session.customer_email,
+      customer_phone: session.customer_phone,
+      notes: session.notes,
+      payment_method: 'UPI',
+      payment_gateway: 'RAZORPAY',
       payment_status: 'PAID',
       payment_reference: razorpay_payment_id,
       razorpay_order_id,
       status: 'NEW',
       milestone_credited: 0,
       milestone_credit_id: null,
-      items: orderItems,
+      items: session.items,
+    });
+
+    // 7. Mark session as VERIFIED
+    await dbService.updatePaymentSession(razorpay_order_id, {
+      status: 'VERIFIED',
+      order_id: order.id,
+      order_number: order.order_number,
+      razorpay_payment_id,
     });
 
     return res.status(201).json({
       success: true,
-      message: 'Payment verified and order placed successfully!',
+      message: 'Payment verified and order confirmed successfully!',
       order: {
         id: order.id,
         order_number: order.order_number,
@@ -609,5 +673,105 @@ exports.verifyRazorpayPayment = async (req, res) => {
   } catch (err) {
     console.error('Verify Razorpay payment error:', err.message);
     return res.status(500).json({ error: 'Failed to verify payment: ' + err.message });
+  }
+};
+
+/**
+ * Public: Secure Razorpay Webhook Handler
+ * POST /api/orders/razorpay/webhook
+ */
+exports.handleRazorpayWebhook = async (req, res) => {
+  try {
+    const signature = req.headers['x-razorpay-signature'];
+    if (!signature) {
+      return res.status(400).json({ error: 'Missing webhook signature header.' });
+    }
+
+    const rawBody = req.rawBody || JSON.stringify(req.body);
+    const isValid = razorpayService.verifyWebhookSignature({
+      rawBody,
+      signature,
+    });
+
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid webhook signature.' });
+    }
+
+    const event = req.body;
+    const eventId = event.event_id || (event.payload && event.payload.payment && event.payload.payment.entity ? event.payload.payment.entity.id : null);
+
+    // Idempotency: Prevent duplicate processing of the same event
+    if (eventId) {
+      const alreadyProcessed = await dbService.isWebhookEventProcessed(eventId);
+      if (alreadyProcessed) {
+        return res.status(200).json({ status: 'already_processed' });
+      }
+      await dbService.recordWebhookEvent(eventId, event);
+    }
+
+    const eventType = event.event;
+
+    // Handle payment.captured or order.paid
+    if (eventType === 'payment.captured' || eventType === 'order.paid') {
+      const paymentEntity = event.payload && event.payload.payment ? event.payload.payment.entity : null;
+      const orderId = paymentEntity ? paymentEntity.order_id : (event.payload && event.payload.order ? event.payload.order.entity.id : null);
+      const paymentId = paymentEntity ? paymentEntity.id : null;
+
+      if (orderId) {
+        const existingOrder = await dbService.getOrderByRazorpayOrderId(orderId);
+        if (!existingOrder) {
+          // If customer closed browser before frontend verify called, finalize via webhook from trusted session!
+          const session = await dbService.getPaymentSessionByRazorpayOrderId(orderId);
+          if (session && session.status !== 'VERIFIED') {
+            const order = await dbService.createOrder({
+              user_id: session.user_id,
+              fulfillment_type: session.fulfillment_type,
+              subtotal: session.subtotal,
+              delivery_fee: session.delivery_fee,
+              total_amount: session.total_amount,
+              delivery_address: session.delivery_address,
+              pickup_time: session.pickup_time,
+              customer_name: session.customer_name,
+              customer_email: session.customer_email,
+              customer_phone: session.customer_phone,
+              notes: session.notes,
+              payment_method: 'UPI',
+              payment_gateway: 'RAZORPAY',
+              payment_status: 'PAID',
+              payment_reference: paymentId,
+              razorpay_order_id: orderId,
+              status: 'NEW',
+              milestone_credited: 0,
+              milestone_credit_id: null,
+              items: session.items,
+            });
+
+            await dbService.updatePaymentSession(orderId, {
+              status: 'VERIFIED',
+              order_id: order.id,
+              order_number: order.order_number,
+              razorpay_payment_id: paymentId,
+            });
+          }
+        }
+      }
+    }
+
+    // Handle refund.processed
+    if (eventType === 'refund.processed') {
+      const refundEntity = event.payload && event.payload.refund ? event.payload.refund.entity : null;
+      const paymentId = refundEntity ? refundEntity.payment_id : null;
+      if (paymentId) {
+        const order = await dbService.getOrderByRazorpayPaymentId(paymentId);
+        if (order) {
+          await dbService.updateOrderStatus(order.id, { payment_status: 'REFUNDED' });
+        }
+      }
+    }
+
+    return res.status(200).json({ status: 'ok' });
+  } catch (err) {
+    console.error('Razorpay webhook error:', err.message);
+    return res.status(500).json({ error: 'Webhook processing error.' });
   }
 };

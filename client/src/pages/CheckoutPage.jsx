@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, Store, CreditCard, Banknote, ShieldCheck, ArrowLeft, CheckCircle2, User, Lock, Smartphone, Sparkles } from 'lucide-react';
+import { Truck, Store, CreditCard, Banknote, ShieldCheck, ArrowLeft, CheckCircle2, User, Lock, Smartphone, Sparkles, Mail, Phone, AlertCircle } from 'lucide-react';
 import { BRAND_CONFIG } from '../config/brand';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,21 +14,55 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
   const { addToast } = useToast();
   const { settings } = useStoreSettings();
 
+  // Customer Details
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+
+  // Fulfillment & Notes
   const [fulfillmentType, setFulfillmentType] = useState('DELIVERY');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [pickupTime, setPickupTime] = useState('Today (Within 2 hours)');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('RAZORPAY_UPI'); // RAZORPAY_UPI or COD
+
+  // Payment State: Exactly UPI or COD
+  const [paymentMethod, setPaymentMethod] = useState('UPI'); // 'UPI' or 'COD'
+  const [razorpayConfig, setRazorpayConfig] = useState({ key_id: '', is_configured: false, loaded: false });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Pre-fill customer address if logged in
+  // Pre-fill customer details from authenticated profile
   useEffect(() => {
-    if (customerUser && !deliveryAddress) {
-      const addr = customerUser.default_address || '';
-      if (addr) setDeliveryAddress(addr);
+    if (customerUser) {
+      if (!customerName && customerUser.name) setCustomerName(customerUser.name);
+      if (!customerPhone && customerUser.phone) setCustomerPhone(customerUser.phone);
+      if (!customerEmail && customerUser.email) setCustomerEmail(customerUser.email);
+      if (!deliveryAddress && customerUser.default_address) setDeliveryAddress(customerUser.default_address);
     }
-  }, [customerUser, deliveryAddress]);
+  }, [customerUser]);
+
+  // Fetch Razorpay configuration on mount
+  useEffect(() => {
+    let isMounted = true;
+    api.getRazorpayConfig()
+      .then((cfg) => {
+        if (isMounted) {
+          setRazorpayConfig({
+            key_id: cfg.key_id || '',
+            is_configured: Boolean(cfg.is_configured),
+            loaded: true,
+          });
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setRazorpayConfig({ key_id: '', is_configured: false, loaded: true });
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const currencySymbol = settings?.currency_symbol || BRAND_CONFIG.currency || '₹';
   const storeDeliveryFee = settings?.default_delivery_fee !== undefined 
@@ -67,7 +101,9 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
     }));
 
     try {
-      // 1. Cash on Delivery (COD) Option
+      // -----------------------------------------------------------------------
+      // 1. CASH ON DELIVERY (COD) FLOW
+      // -----------------------------------------------------------------------
       if (paymentMethod === 'COD') {
         const orderPayload = {
           fulfillment_type: fulfillmentType,
@@ -91,59 +127,40 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
         return;
       }
 
-      // 2. Razorpay Online Payment Flow (UPI, QR, Cards, NetBanking)
+      // -----------------------------------------------------------------------
+      // 2. RAZORPAY ONLINE PAYMENT (UPI) FLOW
+      // -----------------------------------------------------------------------
+      if (!razorpayConfig.is_configured) {
+        throw new Error('Online UPI payments are currently undergoing setup. Please select Cash on Delivery to place your order.');
+      }
+
       const isScriptReady = await loadRazorpayScript();
       if (!isScriptReady && typeof window !== 'undefined' && !window.Razorpay) {
         throw new Error('Unable to load Razorpay payment gateway. Please check your internet connection.');
       }
 
+      // Step A: Server generates Razorpay Order & saves trusted payment session
       const rzpOrder = await api.createRazorpayOrder({
         fulfillment_type: fulfillmentType,
         delivery_address: fulfillmentType === 'DELIVERY' ? deliveryAddress.trim() : null,
+        pickup_time: fulfillmentType === 'PICKUP' ? pickupTime : null,
+        notes: notes.trim() || null,
         items: baseOrderItems,
       }, customerToken);
 
-      // Handle Development Mock Mode if keys are not configured in .env
-      if (rzpOrder.mode === 'mock' || (typeof window !== 'undefined' && !window.Razorpay)) {
-        const mockPaymentId = `pay_mock_${Date.now()}`;
-        const mockSignature = `mock_sig_${Date.now()}`;
-
-        const verifyRes = await api.verifyRazorpayPayment({
-          razorpay_order_id: rzpOrder.razorpay_order_id,
-          razorpay_payment_id: mockPaymentId,
-          razorpay_signature: mockSignature,
-          fulfillment_type: fulfillmentType,
-          delivery_address: fulfillmentType === 'DELIVERY' ? deliveryAddress.trim() : null,
-          pickup_time: fulfillmentType === 'PICKUP' ? pickupTime : null,
-          notes: notes.trim() || null,
-          items: baseOrderItems,
-        }, customerToken);
-
-        clearCart();
-        refreshCustomerProfile();
-        addToast(`Order #${verifyRes.order.order_number} paid & confirmed!`, 'success');
-
-        if (setTrackOrderId) {
-          setTrackOrderId(verifyRes.order.tracking_token);
-        }
-        setActivePage('order-tracking');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-
-      // Launch Real Razorpay Standard Checkout Modal
+      // Step B: Configure Razorpay Checkout Modal
       const rzpOptions = {
-        key: rzpOrder.key_id,
+        key: rzpOrder.key_id || razorpayConfig.key_id,
         amount: rzpOrder.amount,
         currency: rzpOrder.currency || 'INR',
         name: 'Kalã — Cakes and Desserts',
-        description: `Artisanal Order (${items.length} ${items.length === 1 ? 'item' : 'items'})`,
-        image: 'https://emofly.b-cdn.net/hbd_exvhac6ayb3ZKT/width:256/plain/https%3A%2F%2Fstorage.googleapis.com%2Ftakeapp%2Fmedia%2Fcm6f1102v000003jrfygg0njp.png',
+        description: `Artisanal Bakery Order (${items.length} ${items.length === 1 ? 'item' : 'items'})`,
+        image: typeof window !== 'undefined' ? `${window.location.origin}/logo.png` : undefined,
         order_id: rzpOrder.razorpay_order_id,
         prefill: {
-          name: rzpOrder.customer?.name || customerUser?.name || '',
-          email: rzpOrder.customer?.email || customerUser?.email || '',
-          contact: rzpOrder.customer?.phone || customerUser?.phone || '',
+          name: customerName || rzpOrder.customer?.name || customerUser?.name || '',
+          email: customerEmail || rzpOrder.customer?.email || customerUser?.email || '',
+          contact: customerPhone || rzpOrder.customer?.phone || customerUser?.phone || '',
         },
         theme: {
           color: '#2B5835', // Kalã signature green
@@ -151,27 +168,23 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
         modal: {
           ondismiss: () => {
             setLoading(false);
-            addToast('Payment was cancelled. Your bag items remain saved.', 'info');
+            addToast('Payment was cancelled. Your items are still in your cart.', 'info');
           },
         },
         handler: async (response) => {
+          // Step C: Server verification using trusted payment session (zero reliance on client cart)
           try {
             setLoading(true);
             const verifyPayload = {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              fulfillment_type: fulfillmentType,
-              delivery_address: fulfillmentType === 'DELIVERY' ? deliveryAddress.trim() : null,
-              pickup_time: fulfillmentType === 'PICKUP' ? pickupTime : null,
-              notes: notes.trim() || null,
-              items: baseOrderItems,
             };
 
             const verifyRes = await api.verifyRazorpayPayment(verifyPayload, customerToken);
             clearCart();
             refreshCustomerProfile();
-            addToast(`Order #${verifyRes.order.order_number} paid & confirmed!`, 'success');
+            addToast(`Order #${verifyRes.order.order_number} confirmed! Payment verified.`, 'success');
 
             if (setTrackOrderId) {
               setTrackOrderId(verifyRes.order.tracking_token);
@@ -179,7 +192,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
             setActivePage('order-tracking');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           } catch (verifyErr) {
-            setError(verifyErr.message || 'Payment verification failed. Please contact support.');
+            setError(verifyErr.message || 'Payment verification failed. Please contact boutique support.');
           } finally {
             setLoading(false);
           }
@@ -189,7 +202,8 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
       const razorpayInstance = new window.Razorpay(rzpOptions);
       razorpayInstance.on('payment.failed', function (failureRes) {
         setLoading(false);
-        setError(failureRes.error?.description || 'Payment failed. Please try another UPI app or card.');
+        setError(failureRes.error?.description || 'Payment failed. Your cart is still saved. Please try again.');
+        addToast('Payment failed. Your cart is still saved. Please try again.', 'error');
       });
       razorpayInstance.open();
     } catch (err) {
@@ -249,7 +263,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
             Checkout
           </h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem' }}>
-            Complete your details and choose your preferred payment method.
+            Review your order details and choose your preferred payment method.
           </p>
         </div>
 
@@ -274,7 +288,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
               <div>
                 <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Sign in for Rewards & Tracking</h4>
                 <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
-                  Sign in with Google to earn loyalty milestones and easily track your delivery.
+                  Sign in with Google to earn loyalty milestone rewards and easily track your delivery.
                 </p>
               </div>
             </div>
@@ -299,9 +313,13 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
               marginBottom: '24px',
               fontSize: '0.9rem',
               fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
             }}
           >
-            {error}
+            <AlertCircle size={18} />
+            <span>{error}</span>
           </div>
         )}
 
@@ -314,10 +332,10 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
               alignItems: 'flex-start',
             }}
           >
-            {/* Left Column: Fulfillment, Address & Payment */}
+            {/* Left Column: Customer Details, Fulfillment & Payment Selection */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               
-              {/* 1. Fulfillment Type */}
+              {/* 1. Customer / Contact Details */}
               <div
                 style={{
                   background: '#FFFFFF',
@@ -328,9 +346,96 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                   boxSizing: 'border-box',
                 }}
               >
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '16px' }}>1. Delivery or Pickup</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                  <User size={18} color="var(--color-accent)" />
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>1. Customer Details</h3>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)' }}>
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="e.g. Priyanshi Sharma"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--color-border)',
+                        fontSize: '0.92rem',
+                        fontFamily: 'inherit',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)' }}>
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="e.g. 9820012345"
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--color-border)',
+                          fontSize: '0.92rem',
+                          fontFamily: 'inherit',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)' }}>
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        value={customerEmail}
+                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        placeholder="e.g. name@example.com"
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--color-border)',
+                          fontSize: '0.92rem',
+                          fontFamily: 'inherit',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Fulfillment Type & Schedule */}
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '16px',
+                  padding: 'clamp(18px, 4vw, 24px)',
+                  boxShadow: 'var(--shadow-sm)',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '16px' }}>2. Fulfillment</h3>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '18px' }}>
                   <button
                     type="button"
                     onClick={() => setFulfillmentType('DELIVERY')}
@@ -383,27 +488,11 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                     </span>
                   </button>
                 </div>
-              </div>
-
-              {/* 2. Address or Pickup Time */}
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '16px',
-                  padding: 'clamp(18px, 4vw, 24px)',
-                  boxShadow: 'var(--shadow-sm)',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '14px' }}>
-                  {fulfillmentType === 'DELIVERY' ? '2. Delivery Address' : '2. Pickup Schedule'}
-                </h3>
 
                 {fulfillmentType === 'DELIVERY' ? (
                   <div>
                     <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)' }}>
-                      Full Address (Building, Flat, Street, Area, Pin Code) *
+                      Delivery Address *
                     </label>
                     <textarea
                       rows={3}
@@ -426,7 +515,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                 ) : (
                   <div>
                     <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)' }}>
-                      Preferred Pickup Time
+                      Preferred Pickup Schedule
                     </label>
                     <select
                       value={pickupTime}
@@ -454,13 +543,13 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                 {/* Special Instructions / Notes */}
                 <div style={{ marginTop: '16px' }}>
                   <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)' }}>
-                    Special Instructions (Optional)
+                    Order Notes (Optional)
                   </label>
                   <input
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="e.g. Please include birthday candles, ring the bell"
+                    placeholder="e.g. Add birthday candles, ring doorbell"
                     maxLength={150}
                     style={{
                       width: '100%',
@@ -475,7 +564,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                 </div>
               </div>
 
-              {/* 3. Payment Method: Razorpay (UPI, Cards) and COD */}
+              {/* 3. Payment Method: UPI and Cash on Delivery */}
               <div
                 style={{
                   background: '#FFFFFF',
@@ -493,7 +582,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   
-                  {/* Razorpay Online UPI Option */}
+                  {/* Option 1: UPI (Razorpay) */}
                   <label
                     style={{
                       display: 'flex',
@@ -502,17 +591,17 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                       padding: '16px',
                       borderRadius: '12px',
                       border: '2px solid',
-                      borderColor: paymentMethod === 'RAZORPAY_UPI' ? '#2B5835' : 'var(--color-border)',
-                      background: paymentMethod === 'RAZORPAY_UPI' ? 'rgba(43, 88, 53, 0.04)' : '#FFFFFF',
+                      borderColor: paymentMethod === 'UPI' ? '#2B5835' : 'var(--color-border)',
+                      background: paymentMethod === 'UPI' ? 'rgba(43, 88, 53, 0.04)' : '#FFFFFF',
                       cursor: 'pointer',
                       transition: 'all var(--transition-fast)',
                     }}
                   >
                     <input
                       type="radio"
-                      name="payment_method"
-                      value="RAZORPAY_UPI"
-                      checked={paymentMethod === 'RAZORPAY_UPI'}
+                      name="payment_choice"
+                      value="UPI"
+                      checked={paymentMethod === 'UPI'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       style={{ marginTop: '3px', accentColor: '#2B5835' }}
                     />
@@ -520,7 +609,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
                         <Smartphone size={18} color="#2B5835" />
                         <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-main)' }}>
-                          UPI & Online Payment (Razorpay)
+                          UPI
                         </span>
                         <span
                           style={{
@@ -537,19 +626,42 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                         </span>
                       </div>
                       <p style={{ margin: '0 0 10px 0', fontSize: '0.84rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                        Pay securely with any UPI App (Google Pay, PhonePe, Paytm, BHIM, CRED), Scan QR Code, or pay with Debit / Credit Cards & NetBanking.
+                        Pay securely using UPI through Razorpay (Google Pay, PhonePe, Paytm, BHIM, UPI QR, or Cards).
                       </p>
+                      
+                      {/* Visual Brand Badges */}
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#F4EAE6', color: '#633B2B', padding: '3px 8px', borderRadius: '6px' }}>GPay</span>
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#ECE6F4', color: '#4B2A75', padding: '3px 8px', borderRadius: '6px' }}>PhonePe</span>
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#E6F0F4', color: '#1B5B7A', padding: '3px 8px', borderRadius: '6px' }}>Paytm</span>
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#EAF3EC', color: '#2B5835', padding: '3px 8px', borderRadius: '6px' }}>UPI QR</span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#F7F7F7', color: '#555555', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E0E0E0' }}>Cards / NetBanking</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#F7F7F7', color: '#555555', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E0E0E0' }}>Cards</span>
                       </div>
+
+                      {/* Offline / Unconfigured Notice if Razorpay is not yet configured */}
+                      {razorpayConfig.loaded && !razorpayConfig.is_configured && (
+                        <div
+                          style={{
+                            marginTop: '10px',
+                            padding: '8px 12px',
+                            background: '#FFFBEB',
+                            border: '1px solid #FCD34D',
+                            borderRadius: '8px',
+                            fontSize: '0.8rem',
+                            color: '#92400E',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <AlertCircle size={14} />
+                          <span>Online UPI payments are currently undergoing setup. Please select Cash on Delivery to place your order.</span>
+                        </div>
+                      )}
                     </div>
                   </label>
 
-                  {/* Cash on Delivery Option */}
+                  {/* Option 2: Cash on Delivery (COD) */}
                   <label
                     style={{
                       display: 'flex',
@@ -566,7 +678,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                   >
                     <input
                       type="radio"
-                      name="payment_method"
+                      name="payment_choice"
                       value="COD"
                       checked={paymentMethod === 'COD'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
@@ -580,7 +692,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                         </span>
                       </div>
                       <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                        Pay in cash upon arrival of your order at your doorstep or when picking up at the bakery.
+                        Pay cash when your order is delivered to your doorstep or upon boutique pickup.
                       </p>
                     </div>
                   </label>
@@ -604,8 +716,8 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
             >
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '18px' }}>Order Summary</h3>
 
-              {/* Items List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', maxHeight: '240px', overflowY: 'auto' }}>
+              {/* Items List with Thumbnails */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px', maxHeight: '280px', overflowY: 'auto' }}>
                 {items.map((i) => {
                   const prod = i.product || i;
                   const itemTotal = (i.unit_price !== undefined ? i.unit_price : Number(prod.price)) * i.quantity;
@@ -613,12 +725,44 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                   const toppingText = i.selected_topping ? ` + ${i.selected_topping}` : '';
 
                   return (
-                    <div key={i.key || prod.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', alignItems: 'center' }}>
-                      <div style={{ minWidth: 0, paddingRight: '8px' }}>
-                        <span style={{ fontWeight: 600 }}>{prod.name}{variantText}{toppingText}</span>
-                        <span style={{ color: 'var(--color-text-muted)', marginLeft: '6px' }}>× {i.quantity}</span>
+                    <div
+                      key={i.key || prod.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        fontSize: '0.9rem',
+                        paddingBottom: '10px',
+                        borderBottom: '1px solid var(--color-border-subtle)',
+                      }}
+                    >
+                      {/* Product Thumbnail */}
+                      <img
+                        src={prod.image_url || '/placeholder.jpg'}
+                        alt={prod.name}
+                        onError={(e) => { e.currentTarget.src = '/placeholder.jpg'; }}
+                        style={{
+                          width: '46px',
+                          height: '46px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                          flexShrink: 0,
+                          border: '1px solid var(--color-border)',
+                        }}
+                      />
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {prod.name}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                          {variantText && <span>{variantText.slice(2, -1)}</span>}
+                          {toppingText && <span> • {toppingText.slice(3)}</span>}
+                          <span style={{ marginLeft: variantText || toppingText ? '6px' : 0 }}>× {i.quantity}</span>
+                        </div>
                       </div>
-                      <span style={{ fontWeight: 600, flexShrink: 0 }}>
+
+                      <span style={{ fontWeight: 700, flexShrink: 0, color: 'var(--color-text-main)' }}>
                         {currencySymbol}{itemTotal.toFixed(0)}
                       </span>
                     </div>
@@ -657,7 +801,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
               {/* Action Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (paymentMethod === 'UPI' && razorpayConfig.loaded && !razorpayConfig.is_configured)}
                 className="btn btn-primary btn-lg"
                 style={{
                   width: '100%',
@@ -668,6 +812,8 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                   gap: '8px',
                   borderRadius: 'var(--radius-full)',
                   marginTop: '24px',
+                  opacity: (paymentMethod === 'UPI' && razorpayConfig.loaded && !razorpayConfig.is_configured) ? 0.6 : 1,
+                  cursor: (paymentMethod === 'UPI' && razorpayConfig.loaded && !razorpayConfig.is_configured) ? 'not-allowed' : 'pointer',
                 }}
               >
                 <Lock size={16} />
@@ -676,7 +822,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                     ? 'Processing...'
                     : paymentMethod === 'COD'
                     ? `Place Order (COD) • ${currencySymbol}${totalAmount.toFixed(0)}`
-                    : `Pay with UPI / Razorpay • ${currencySymbol}${totalAmount.toFixed(0)}`}
+                    : `Pay with UPI • ${currencySymbol}${totalAmount.toFixed(0)}`}
                 </span>
               </button>
 

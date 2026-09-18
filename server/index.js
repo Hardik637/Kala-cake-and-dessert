@@ -29,12 +29,12 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "https://accounts.google.com/gsi/client", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "https://accounts.google.com/gsi/client", "https://checkout.razorpay.com", "'unsafe-inline'"],
         styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "https:", "http:"],
-        connectSrc: ["'self'", "https://accounts.google.com/gsi/"],
-        frameSrc: ["https://accounts.google.com/gsi/"],
+        connectSrc: ["'self'", "https://accounts.google.com/gsi/", "https://api.razorpay.com", "https://lumberjack.razorpay.com"],
+        frameSrc: ["https://accounts.google.com/gsi/", "https://api.razorpay.com"],
       },
     },
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
@@ -62,7 +62,12 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({
+  limit: '5mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Request Logger (Development / Diagnostics)

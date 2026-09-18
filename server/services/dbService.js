@@ -32,6 +32,8 @@ const COLLECTIONS = {
   REDEMPTIONS: 'reward_redemptions',
   AUDIT_LOGS: 'milestone_audit_logs',
   ENQUIRIES: 'custom_enquiries',
+  PAYMENT_SESSIONS: 'payment_sessions',
+  WEBHOOK_EVENTS: 'webhook_events',
 };
 
 // Helper to format Firestore document with its ID
@@ -1401,4 +1403,84 @@ exports.getCustomerDetails = async (customerId) => {
     milestones,
     redemptions,
   };
+};
+
+
+// ---------------------------------------------------------------------------
+// PAYMENT SESSIONS & IDEMPOTENCY
+// ---------------------------------------------------------------------------
+exports.createPaymentSession = async (sessionData) => {
+  const db = getDb();
+  const id = sessionData.razorpay_order_id;
+  const docRef = db.collection(COLLECTIONS.PAYMENT_SESSIONS).doc(String(id));
+  const payload = {
+    ...sessionData,
+    id,
+    created_at: sessionData.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  await docRef.set(payload);
+  return payload;
+};
+
+exports.getPaymentSessionByRazorpayOrderId = async (razorpayOrderId) => {
+  if (!razorpayOrderId) return null;
+  const db = getDb();
+  const doc = await db.collection(COLLECTIONS.PAYMENT_SESSIONS).doc(String(razorpayOrderId)).get();
+  if (doc.exists) return docWithId(doc);
+  return null;
+};
+
+exports.updatePaymentSession = async (razorpayOrderId, updates) => {
+  if (!razorpayOrderId) return null;
+  const db = getDb();
+  const docRef = db.collection(COLLECTIONS.PAYMENT_SESSIONS).doc(String(razorpayOrderId));
+  const payload = {
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+  await docRef.set(payload, { merge: true });
+  const updatedDoc = await docRef.get();
+  return docWithId(updatedDoc);
+};
+
+exports.getOrderByRazorpayPaymentId = async (paymentId) => {
+  if (!paymentId) return null;
+  const db = getDb();
+  const snap = await db.collection(COLLECTIONS.ORDERS)
+    .where('payment_reference', '==', String(paymentId).trim())
+    .limit(1)
+    .get();
+
+  if (snap.empty) return null;
+  return docWithId(snap.docs[0]);
+};
+
+exports.getOrderByRazorpayOrderId = async (razorpayOrderId) => {
+  if (!razorpayOrderId) return null;
+  const db = getDb();
+  const snap = await db.collection(COLLECTIONS.ORDERS)
+    .where('razorpay_order_id', '==', String(razorpayOrderId).trim())
+    .limit(1)
+    .get();
+
+  if (snap.empty) return null;
+  return docWithId(snap.docs[0]);
+};
+
+exports.isWebhookEventProcessed = async (eventId) => {
+  if (!eventId) return false;
+  const db = getDb();
+  const doc = await db.collection(COLLECTIONS.WEBHOOK_EVENTS).doc(String(eventId)).get();
+  return doc.exists;
+};
+
+exports.recordWebhookEvent = async (eventId, payload = {}) => {
+  if (!eventId) return;
+  const db = getDb();
+  await db.collection(COLLECTIONS.WEBHOOK_EVENTS).doc(String(eventId)).set({
+    event_id: eventId,
+    event: payload.event || 'unknown',
+    processed_at: new Date().toISOString(),
+  });
 };
