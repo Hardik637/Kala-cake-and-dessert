@@ -88,7 +88,7 @@ export default function CartDrawer({ onProceedCheckout, onExploreMenu }) {
               </p>
               <button
                 onClick={() => {
-                  closeCart();
+                  closeCart(true);
                   if (onExploreMenu) onExploreMenu();
                 }}
                 className="btn btn-secondary"
@@ -245,7 +245,7 @@ export default function CartDrawer({ onProceedCheckout, onExploreMenu }) {
 
             <button
               onClick={() => {
-                closeCart();
+                closeCart(true);
                 if (onProceedCheckout) onProceedCheckout();
               }}
               className="btn btn-primary btn-lg"

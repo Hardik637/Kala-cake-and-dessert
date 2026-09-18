@@ -213,16 +213,19 @@ function MainApp() {
       closeCart(true);
     }
 
+    const hasCartState = typeof window !== 'undefined' && window.history.state && window.history.state.cartOpen;
+    const shouldReplace = replace || Boolean(hasCartState);
+
     // If already on this exact page and URL, just scroll to top without adding redundant history
     if (isSamePage && isSamePath) {
+      if (hasCartState) {
+        window.history.replaceState({ page: pageId }, '', targetPath);
+      }
       if (!preserveScroll) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
       return;
     }
-
-    const hasCartState = typeof window !== 'undefined' && window.history.state && window.history.state.cartOpen;
-    const shouldReplace = replace || Boolean(hasCartState);
 
     // Push new history entry (or replace)
     if (shouldReplace) {

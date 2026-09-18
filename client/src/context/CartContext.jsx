@@ -91,6 +91,7 @@ export const CartProvider = ({ children }) => {
   // History-aware Cart Navigation
   const openCart = useCallback(() => {
     if (isCartOpenRef.current) return;
+    isCartOpenRef.current = true;
     setIsCartOpen(true);
     if (typeof window !== 'undefined') {
       try {
@@ -101,6 +102,7 @@ export const CartProvider = ({ children }) => {
 
   const closeCart = useCallback((skipHistory = false) => {
     if (!isCartOpenRef.current) return;
+    isCartOpenRef.current = false;
     setIsCartOpen(false);
     if (!skipHistory && !isPoppingRef.current && typeof window !== 'undefined') {
       try {
@@ -124,8 +126,10 @@ export const CartProvider = ({ children }) => {
     const handlePopState = (e) => {
       isPoppingRef.current = true;
       if (e.state && e.state.cartOpen) {
+        isCartOpenRef.current = true;
         setIsCartOpen(true);
       } else if (isCartOpenRef.current) {
+        isCartOpenRef.current = false;
         setIsCartOpen(false);
       }
       setTimeout(() => {
