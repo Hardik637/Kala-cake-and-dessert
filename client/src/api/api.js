@@ -58,6 +58,11 @@ export const api = {
   // Public tracking strictly by cryptographically random tracking token
   trackOrder: (trackingToken) => apiFetch(`/orders/track/${encodeURIComponent(trackingToken)}`),
 
+  // Razorpay Online Payments (UPI & Cards)
+  getRazorpayConfig: () => apiFetch('/orders/razorpay/config'),
+  createRazorpayOrder: (body, token) => apiFetch('/orders/razorpay/create-order', { method: 'POST', body: JSON.stringify(body), token }),
+  verifyRazorpayPayment: (body, token) => apiFetch('/orders/razorpay/verify-payment', { method: 'POST', body: JSON.stringify(body), token }),
+
   // Rewards (Authenticated Customer Only)
   getMyRewardStatus: (token) => apiFetch('/rewards/my-status', { token }),
 

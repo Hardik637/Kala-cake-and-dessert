@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, Store, CreditCard, QrCode, Banknote, ShieldCheck, ArrowLeft, CheckCircle2, User, Lock } from 'lucide-react';
+import { Truck, Store, CreditCard, Banknote, ShieldCheck, ArrowLeft, CheckCircle2, User, Lock, Smartphone, Sparkles } from 'lucide-react';
 import { BRAND_CONFIG } from '../config/brand';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useStoreSettings } from '../context/StoreSettingsContext';
 import { api } from '../api/api';
+import { loadRazorpayScript } from '../utils/loadRazorpay';
 
 export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderId }) {
   const { items, subtotal, clearCart } = useCart();
@@ -17,8 +18,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [pickupTime, setPickupTime] = useState('Today (Within 2 hours)');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('UPI');
-  const [upiApp, setUpiApp] = useState('GPAY'); // GPAY, PHONEPE, PAYTM, BHIM
+  const [paymentMethod, setPaymentMethod] = useState('RAZORPAY_UPI'); // RAZORPAY_UPI or COD
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -59,35 +59,141 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
     setError('');
     setLoading(true);
 
+    const baseOrderItems = items.map((i) => ({
+      product_id: i.product?.id || i.id,
+      quantity: i.quantity,
+      selected_variant: i.selected_variant ? (i.selected_variant.id || i.selected_variant.name || i.selected_variant) : null,
+      selected_topping: i.selected_topping || null,
+    }));
+
     try {
-      const orderPayload = {
+      // 1. Cash on Delivery (COD) Option
+      if (paymentMethod === 'COD') {
+        const orderPayload = {
+          fulfillment_type: fulfillmentType,
+          delivery_address: fulfillmentType === 'DELIVERY' ? deliveryAddress.trim() : null,
+          pickup_time: fulfillmentType === 'PICKUP' ? pickupTime : null,
+          notes: notes.trim() || null,
+          payment_method: 'COD',
+          items: baseOrderItems,
+        };
+
+        const res = await api.placeOrder(orderPayload, customerToken);
+        clearCart();
+        refreshCustomerProfile();
+        addToast(`Order #${res.order.order_number} confirmed with Cash on Delivery!`, 'success');
+
+        if (setTrackOrderId) {
+          setTrackOrderId(res.order.tracking_token);
+        }
+        setActivePage('order-tracking');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // 2. Razorpay Online Payment Flow (UPI, QR, Cards, NetBanking)
+      const isScriptReady = await loadRazorpayScript();
+      if (!isScriptReady && typeof window !== 'undefined' && !window.Razorpay) {
+        throw new Error('Unable to load Razorpay payment gateway. Please check your internet connection.');
+      }
+
+      const rzpOrder = await api.createRazorpayOrder({
         fulfillment_type: fulfillmentType,
         delivery_address: fulfillmentType === 'DELIVERY' ? deliveryAddress.trim() : null,
-        pickup_time: fulfillmentType === 'PICKUP' ? pickupTime : null,
-        notes: notes.trim() || null,
-        payment_method: paymentMethod,
-        items: items.map((i) => ({
-          product_id: i.product?.id || i.id,
-          quantity: i.quantity,
-          selected_variant: i.selected_variant ? (i.selected_variant.id || i.selected_variant.name || i.selected_variant) : null,
-          selected_topping: i.selected_topping || null,
-        })),
+        items: baseOrderItems,
+      }, customerToken);
+
+      // Handle Development Mock Mode if keys are not configured in .env
+      if (rzpOrder.mode === 'mock' || (typeof window !== 'undefined' && !window.Razorpay)) {
+        const mockPaymentId = `pay_mock_${Date.now()}`;
+        const mockSignature = `mock_sig_${Date.now()}`;
+
+        const verifyRes = await api.verifyRazorpayPayment({
+          razorpay_order_id: rzpOrder.razorpay_order_id,
+          razorpay_payment_id: mockPaymentId,
+          razorpay_signature: mockSignature,
+          fulfillment_type: fulfillmentType,
+          delivery_address: fulfillmentType === 'DELIVERY' ? deliveryAddress.trim() : null,
+          pickup_time: fulfillmentType === 'PICKUP' ? pickupTime : null,
+          notes: notes.trim() || null,
+          items: baseOrderItems,
+        }, customerToken);
+
+        clearCart();
+        refreshCustomerProfile();
+        addToast(`Order #${verifyRes.order.order_number} paid & confirmed!`, 'success');
+
+        if (setTrackOrderId) {
+          setTrackOrderId(verifyRes.order.tracking_token);
+        }
+        setActivePage('order-tracking');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Launch Real Razorpay Standard Checkout Modal
+      const rzpOptions = {
+        key: rzpOrder.key_id,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency || 'INR',
+        name: 'Kalã — Cakes and Desserts',
+        description: `Artisanal Order (${items.length} ${items.length === 1 ? 'item' : 'items'})`,
+        image: 'https://emofly.b-cdn.net/hbd_exvhac6ayb3ZKT/width:256/plain/https%3A%2F%2Fstorage.googleapis.com%2Ftakeapp%2Fmedia%2Fcm6f1102v000003jrfygg0njp.png',
+        order_id: rzpOrder.razorpay_order_id,
+        prefill: {
+          name: rzpOrder.customer?.name || customerUser?.name || '',
+          email: rzpOrder.customer?.email || customerUser?.email || '',
+          contact: rzpOrder.customer?.phone || customerUser?.phone || '',
+        },
+        theme: {
+          color: '#2B5835', // Kalã signature green
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            addToast('Payment was cancelled. Your bag items remain saved.', 'info');
+          },
+        },
+        handler: async (response) => {
+          try {
+            setLoading(true);
+            const verifyPayload = {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              fulfillment_type: fulfillmentType,
+              delivery_address: fulfillmentType === 'DELIVERY' ? deliveryAddress.trim() : null,
+              pickup_time: fulfillmentType === 'PICKUP' ? pickupTime : null,
+              notes: notes.trim() || null,
+              items: baseOrderItems,
+            };
+
+            const verifyRes = await api.verifyRazorpayPayment(verifyPayload, customerToken);
+            clearCart();
+            refreshCustomerProfile();
+            addToast(`Order #${verifyRes.order.order_number} paid & confirmed!`, 'success');
+
+            if (setTrackOrderId) {
+              setTrackOrderId(verifyRes.order.tracking_token);
+            }
+            setActivePage('order-tracking');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } catch (verifyErr) {
+            setError(verifyErr.message || 'Payment verification failed. Please contact support.');
+          } finally {
+            setLoading(false);
+          }
+        },
       };
 
-      const res = await api.placeOrder(orderPayload, customerToken);
-      clearCart();
-      refreshCustomerProfile();
-      addToast(`Order #${res.order.order_number} confirmed! Thank you.`, 'success');
-      
-      // Direct to tracking strictly by random tracking_token
-      if (setTrackOrderId) {
-        setTrackOrderId(res.order.tracking_token);
-      }
-      setActivePage('order-tracking');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const razorpayInstance = new window.Razorpay(rzpOptions);
+      razorpayInstance.on('payment.failed', function (failureRes) {
+        setLoading(false);
+        setError(failureRes.error?.description || 'Payment failed. Please try another UPI app or card.');
+      });
+      razorpayInstance.open();
     } catch (err) {
-      setError(err.message || 'Failed to place order. Please try again.');
-    } finally {
+      setError(err.message || 'Failed to process order. Please try again.');
       setLoading(false);
     }
   };
@@ -111,10 +217,10 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
             </p>
             <button
               onClick={() => { setActivePage('menu'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              className="btn btn-primary"
-              style={{ minHeight: '44px', padding: '10px 24px' }}
+              className="btn btn-primary btn-lg"
+              style={{ minHeight: '46px', margin: '0 auto' }}
             >
-              Explore Menu
+              Explore Our Menu
             </button>
           </div>
         </div>
@@ -123,46 +229,76 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
   }
 
   return (
-    <div className="section-spacing" style={{ paddingTop: 'clamp(20px, 4vw, 36px)', width: '100%', boxSizing: 'border-box' }}>
-      <div className="container" style={{ maxWidth: '960px', padding: '0 16px', boxSizing: 'border-box' }}>
+    <div className="section-spacing" style={{ paddingTop: 'clamp(20px, 5vw, 40px)', width: '100%', boxSizing: 'border-box' }}>
+      <div className="container" style={{ maxWidth: '1080px', padding: '0 16px', boxSizing: 'border-box' }}>
+        
         {/* Navigation Breadcrumb */}
-        <button
-          onClick={() => setActivePage('menu')}
-          style={{
-            background: 'none',
-            border: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: 'var(--color-text-muted)',
-            cursor: 'pointer',
-            fontSize: '0.88rem',
-            marginBottom: '20px',
-            padding: '6px 0',
-            minHeight: '36px',
-          }}
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Menu</span>
-        </button>
+        <div style={{ marginBottom: '24px' }}>
+          <button
+            onClick={() => { setActivePage('menu'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className="btn btn-secondary btn-sm"
+            style={{ minHeight: '38px', gap: '6px' }}
+          >
+            <ArrowLeft size={16} />
+            <span>Continue Shopping</span>
+          </button>
+        </div>
 
-        <div className="section-header" style={{ marginBottom: '28px', textAlign: 'left' }}>
-          <h1 className="section-title" style={{ fontSize: 'clamp(1.75rem, 4.5vw, 2.3rem)' }}>Checkout</h1>
-          <p className="section-subtitle" style={{ margin: 0 }}>
-            Complete your order details below.
+        <div style={{ marginBottom: '28px' }}>
+          <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 800, marginBottom: '6px' }}>
+            Checkout
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem' }}>
+            Complete your details and choose your preferred payment method.
           </p>
         </div>
+
+        {/* Authentication Notice if Guest */}
+        {!isCustomerAuthenticated && (
+          <div
+            style={{
+              background: 'var(--color-surface-warm)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <User size={22} color="var(--color-accent)" />
+              <div>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Sign in for Rewards & Tracking</h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
+                  Sign in with Google to earn loyalty milestones and easily track your delivery.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onOpenAuth}
+              className="btn btn-primary"
+              style={{ minHeight: '40px', padding: '8px 20px' }}
+            >
+              Sign In with Google
+            </button>
+          </div>
+        )}
 
         {error && (
           <div
             style={{
+              background: '#FDF2F2',
+              color: '#991B1B',
+              border: '1px solid #F87171',
+              borderRadius: '12px',
               padding: '14px 18px',
-              background: '#FFF5F5',
-              border: '1px solid #FEB2B2',
-              color: '#C53030',
-              borderRadius: '10px',
               marginBottom: '24px',
               fontSize: '0.9rem',
+              fontWeight: 500,
             }}
           >
             {error}
@@ -171,17 +307,17 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
 
         <form onSubmit={handlePlaceOrder}>
           <div
-            className="checkout-layout-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
               gap: '28px',
-              alignItems: 'start',
+              alignItems: 'flex-start',
             }}
           >
-            {/* Left Column: Form Details */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
-              {/* 1. Account Section */}
+            {/* Left Column: Fulfillment, Address & Payment */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              
+              {/* 1. Fulfillment Type */}
               <div
                 style={{
                   background: '#FFFFFF',
@@ -192,147 +328,64 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                   boxSizing: 'border-box',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                  <User size={18} color="var(--color-accent)" />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>1. Your Account</h3>
-                </div>
-
-                {isCustomerAuthenticated ? (
-                  <div style={{ fontSize: '0.92rem' }}>
-                    <div style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>{customerUser?.name}</div>
-                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>{customerUser?.email}</div>
-                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>{customerUser?.phone}</div>
-                  </div>
-                ) : (
-                  <div>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '14px', lineHeight: 1.5 }}>
-                      Sign in with your Google account to complete your order and earn milestone rewards.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={onOpenAuth}
-                      className="btn btn-primary"
-                      style={{ minHeight: '44px', padding: '8px 20px', borderRadius: 'var(--radius-full)' }}
-                    >
-                      Sign In with Google
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 2. Fulfillment Options (Delivery vs Pickup) */}
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '16px',
-                  padding: 'clamp(18px, 4vw, 24px)',
-                  boxShadow: 'var(--shadow-sm)',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                  <Truck size={18} color="var(--color-accent)" />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>2. Delivery or Pickup</h3>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '16px' }}>1. Delivery or Pickup</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <button
                     type="button"
                     onClick={() => setFulfillmentType('DELIVERY')}
                     style={{
-                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '16px 12px',
                       borderRadius: '12px',
                       border: '2px solid',
-                      borderColor: fulfillmentType === 'DELIVERY' ? 'var(--color-accent)' : 'var(--color-border)',
-                      background: fulfillmentType === 'DELIVERY' ? 'var(--color-surface-warm)' : '#FFFFFF',
+                      borderColor: fulfillmentType === 'DELIVERY' ? '#2B5835' : 'var(--color-border)',
+                      background: fulfillmentType === 'DELIVERY' ? 'rgba(43, 88, 53, 0.05)' : '#FFFFFF',
                       cursor: 'pointer',
-                      textAlign: 'left',
-                      minHeight: '44px',
+                      transition: 'all var(--transition-fast)',
                     }}
                   >
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-main)' }}>Doorstep Delivery</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                      {storeDeliveryFee === 0 ? 'Free' : `${currencySymbol}${storeDeliveryFee.toFixed(0)} fee`}
-                    </div>
+                    <Truck size={22} color={fulfillmentType === 'DELIVERY' ? '#2B5835' : 'var(--color-text-muted)'} />
+                    <span style={{ fontWeight: 700, fontSize: '0.92rem', color: fulfillmentType === 'DELIVERY' ? '#2B5835' : 'var(--color-text-main)' }}>
+                      Home Delivery
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                      {storeDeliveryFee === 0 ? 'Free Delivery' : `${currencySymbol}${storeDeliveryFee.toFixed(0)} fee`}
+                    </span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setFulfillmentType('PICKUP')}
                     style={{
-                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '16px 12px',
                       borderRadius: '12px',
                       border: '2px solid',
-                      borderColor: fulfillmentType === 'PICKUP' ? 'var(--color-accent)' : 'var(--color-border)',
-                      background: fulfillmentType === 'PICKUP' ? 'var(--color-surface-warm)' : '#FFFFFF',
+                      borderColor: fulfillmentType === 'PICKUP' ? '#2B5835' : 'var(--color-border)',
+                      background: fulfillmentType === 'PICKUP' ? 'rgba(43, 88, 53, 0.05)' : '#FFFFFF',
                       cursor: 'pointer',
-                      textAlign: 'left',
-                      minHeight: '44px',
+                      transition: 'all var(--transition-fast)',
                     }}
                   >
-                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-main)' }}>Bakery Pickup</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                      Complimentary
-                    </div>
+                    <Store size={22} color={fulfillmentType === 'PICKUP' ? '#2B5835' : 'var(--color-text-muted)'} />
+                    <span style={{ fontWeight: 700, fontSize: '0.92rem', color: fulfillmentType === 'PICKUP' ? '#2B5835' : 'var(--color-text-main)' }}>
+                      Boutique Pickup
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                      Free • Ready in 2h
+                    </span>
                   </button>
-                </div>
-
-                {/* Delivery Address or Pickup Details */}
-                {fulfillmentType === 'DELIVERY' ? (
-                  <div>
-                    <label className="form-label" htmlFor="delivery-address">
-                      Delivery Address <span style={{ color: 'var(--color-accent)' }}>*</span>
-                    </label>
-                    <textarea
-                      id="delivery-address"
-                      required={fulfillmentType === 'DELIVERY'}
-                      rows={3}
-                      placeholder="Flat/House No., Building, Street, Area, Landmark, Pincode"
-                      value={deliveryAddress}
-                      onChange={(e) => setDeliveryAddress(e.target.value)}
-                      className="form-input"
-                      style={{ width: '100%', padding: '12px', fontSize: '16px', lineHeight: 1.5, boxSizing: 'border-box' }}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="form-label" htmlFor="pickup-time">
-                      Estimated Pickup Time
-                    </label>
-                    <select
-                      id="pickup-time"
-                      value={pickupTime}
-                      onChange={(e) => setPickupTime(e.target.value)}
-                      className="form-input"
-                      style={{ width: '100%', minHeight: '46px', fontSize: '16px', boxSizing: 'border-box' }}
-                    >
-                      <option value="Today (Within 1-2 hours)">Today (Within 1-2 hours)</option>
-                      <option value="Today Evening (5 PM - 8 PM)">Today Evening (5 PM - 8 PM)</option>
-                      <option value="Tomorrow Morning (10 AM - 1 PM)">Tomorrow Morning (10 AM - 1 PM)</option>
-                      <option value="Tomorrow Evening (5 PM - 8 PM)">Tomorrow Evening (5 PM - 8 PM)</option>
-                    </select>
-                  </div>
-                )}
-
-                {/* Order Notes */}
-                <div style={{ marginTop: '16px' }}>
-                  <label className="form-label" htmlFor="order-notes">
-                    Special Instructions (Optional)
-                  </label>
-                  <input
-                    id="order-notes"
-                    type="text"
-                    placeholder="e.g. Ring the doorbell, write 'Happy Birthday' on card"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="form-input"
-                    style={{ width: '100%', minHeight: '44px', fontSize: '16px', boxSizing: 'border-box' }}
-                  />
                 </div>
               </div>
 
-              {/* 3. Payment Method */}
+              {/* 2. Address or Pickup Time */}
               <div
                 style={{
                   background: '#FFFFFF',
@@ -343,74 +396,172 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                   boxSizing: 'border-box',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '14px' }}>
+                  {fulfillmentType === 'DELIVERY' ? '2. Delivery Address' : '2. Pickup Schedule'}
+                </h3>
+
+                {fulfillmentType === 'DELIVERY' ? (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)' }}>
+                      Full Address (Building, Flat, Street, Area, Pin Code) *
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={deliveryAddress}
+                      onChange={(e) => setDeliveryAddress(e.target.value)}
+                      placeholder="e.g. Flat 402, Sea Green Apts, Hill Road, Bandra West, Mumbai - 400050"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--color-border)',
+                        fontSize: '0.92rem',
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)' }}>
+                      Preferred Pickup Time
+                    </label>
+                    <select
+                      value={pickupTime}
+                      onChange={(e) => setPickupTime(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--color-border)',
+                        fontSize: '0.92rem',
+                        fontFamily: 'inherit',
+                        background: '#FFFFFF',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <option value="Today (Within 2 hours)">Today (Within 2 hours)</option>
+                      <option value="Today Evening (5:00 PM - 8:00 PM)">Today Evening (5:00 PM - 8:00 PM)</option>
+                      <option value="Tomorrow Morning (11:00 AM - 1:00 PM)">Tomorrow Morning (11:00 AM - 1:00 PM)</option>
+                      <option value="Tomorrow Afternoon (2:00 PM - 5:00 PM)">Tomorrow Afternoon (2:00 PM - 5:00 PM)</option>
+                      <option value="Tomorrow Evening (5:00 PM - 8:00 PM)">Tomorrow Evening (5:00 PM - 8:00 PM)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Special Instructions / Notes */}
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)' }}>
+                    Special Instructions (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="e.g. Please include birthday candles, ring the bell"
+                    maxLength={150}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--color-border)',
+                      fontSize: '0.9rem',
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* 3. Payment Method: Razorpay (UPI, Cards) and COD */}
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '16px',
+                  padding: 'clamp(18px, 4vw, 24px)',
+                  boxShadow: 'var(--shadow-sm)',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                   <CreditCard size={18} color="var(--color-accent)" />
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>3. Payment Method</h3>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  
+                  {/* Razorpay Online UPI Option */}
                   <label
                     style={{
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      border: '1px solid',
-                      borderColor: paymentMethod === 'UPI' ? 'var(--color-accent)' : 'var(--color-border)',
-                      background: paymentMethod === 'UPI' ? 'var(--color-surface-warm)' : '#FFFFFF',
+                      alignItems: 'flex-start',
+                      gap: '14px',
+                      padding: '16px',
+                      borderRadius: '12px',
+                      border: '2px solid',
+                      borderColor: paymentMethod === 'RAZORPAY_UPI' ? '#2B5835' : 'var(--color-border)',
+                      background: paymentMethod === 'RAZORPAY_UPI' ? 'rgba(43, 88, 53, 0.04)' : '#FFFFFF',
                       cursor: 'pointer',
-                      minHeight: '44px',
+                      transition: 'all var(--transition-fast)',
                     }}
                   >
                     <input
                       type="radio"
                       name="payment_method"
-                      value="UPI"
-                      checked={paymentMethod === 'UPI'}
+                      value="RAZORPAY_UPI"
+                      checked={paymentMethod === 'RAZORPAY_UPI'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
+                      style={{ marginTop: '3px', accentColor: '#2B5835' }}
                     />
-                    <QrCode size={18} color="var(--color-accent)" />
-                    <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>UPI (GPay, PhonePe, Paytm, QR)</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                        <Smartphone size={18} color="#2B5835" />
+                        <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-main)' }}>
+                          UPI & Online Payment (Razorpay)
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            background: '#EAF3EC',
+                            color: '#2B5835',
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            border: '1px solid #C8DEC9',
+                          }}
+                        >
+                          Fast & Secure
+                        </span>
+                      </div>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '0.84rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                        Pay securely with any UPI App (Google Pay, PhonePe, Paytm, BHIM, CRED), Scan QR Code, or pay with Debit / Credit Cards & NetBanking.
+                      </p>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#F4EAE6', color: '#633B2B', padding: '3px 8px', borderRadius: '6px' }}>GPay</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#ECE6F4', color: '#4B2A75', padding: '3px 8px', borderRadius: '6px' }}>PhonePe</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#E6F0F4', color: '#1B5B7A', padding: '3px 8px', borderRadius: '6px' }}>Paytm</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#EAF3EC', color: '#2B5835', padding: '3px 8px', borderRadius: '6px' }}>UPI QR</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#F7F7F7', color: '#555555', padding: '3px 8px', borderRadius: '6px', border: '1px solid #E0E0E0' }}>Cards / NetBanking</span>
+                      </div>
+                    </div>
                   </label>
 
+                  {/* Cash on Delivery Option */}
                   <label
                     style={{
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      border: '1px solid',
-                      borderColor: paymentMethod === 'CARD' ? 'var(--color-accent)' : 'var(--color-border)',
-                      background: paymentMethod === 'CARD' ? 'var(--color-surface-warm)' : '#FFFFFF',
+                      alignItems: 'flex-start',
+                      gap: '14px',
+                      padding: '16px',
+                      borderRadius: '12px',
+                      border: '2px solid',
+                      borderColor: paymentMethod === 'COD' ? '#2B5835' : 'var(--color-border)',
+                      background: paymentMethod === 'COD' ? 'rgba(43, 88, 53, 0.04)' : '#FFFFFF',
                       cursor: 'pointer',
-                      minHeight: '44px',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="payment_method"
-                      value="CARD"
-                      checked={paymentMethod === 'CARD'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                    />
-                    <CreditCard size={18} color="var(--color-accent)" />
-                    <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Debit / Credit Card</span>
-                  </label>
-
-                  <label
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      border: '1px solid',
-                      borderColor: paymentMethod === 'COD' ? 'var(--color-accent)' : 'var(--color-border)',
-                      background: paymentMethod === 'COD' ? 'var(--color-surface-warm)' : '#FFFFFF',
-                      cursor: 'pointer',
-                      minHeight: '44px',
+                      transition: 'all var(--transition-fast)',
                     }}
                   >
                     <input
@@ -419,9 +570,19 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                       value="COD"
                       checked={paymentMethod === 'COD'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
+                      style={{ marginTop: '3px', accentColor: '#2B5835' }}
                     />
-                    <Banknote size={18} color="var(--color-accent)" />
-                    <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Cash on Delivery / Pickup</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <Banknote size={18} color="#2B5835" />
+                        <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-main)' }}>
+                          Cash on Delivery (COD)
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                        Pay in cash upon arrival of your order at your doorstep or when picking up at the bakery.
+                      </p>
+                    </div>
                   </label>
                 </div>
               </div>
@@ -447,14 +608,18 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', maxHeight: '240px', overflowY: 'auto' }}>
                 {items.map((i) => {
                   const prod = i.product || i;
+                  const itemTotal = (i.unit_price !== undefined ? i.unit_price : Number(prod.price)) * i.quantity;
+                  const variantText = i.selected_variant ? ` (${i.selected_variant.name || i.selected_variant})` : '';
+                  const toppingText = i.selected_topping ? ` + ${i.selected_topping}` : '';
+
                   return (
-                    <div key={prod.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', alignItems: 'center' }}>
+                    <div key={i.key || prod.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', alignItems: 'center' }}>
                       <div style={{ minWidth: 0, paddingRight: '8px' }}>
-                        <span style={{ fontWeight: 600 }}>{prod.name}</span>
+                        <span style={{ fontWeight: 600 }}>{prod.name}{variantText}{toppingText}</span>
                         <span style={{ color: 'var(--color-text-muted)', marginLeft: '6px' }}>× {i.quantity}</span>
                       </div>
                       <span style={{ fontWeight: 600, flexShrink: 0 }}>
-                        {currencySymbol}{(Number(prod.price) * i.quantity).toFixed(0)}
+                        {currencySymbol}{itemTotal.toFixed(0)}
                       </span>
                     </div>
                   );
@@ -489,7 +654,7 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                 </div>
               </div>
 
-              {/* Place Order Button */}
+              {/* Action Button */}
               <button
                 type="submit"
                 disabled={loading}
@@ -506,12 +671,18 @@ export default function CheckoutPage({ setActivePage, onOpenAuth, setTrackOrderI
                 }}
               >
                 <Lock size={16} />
-                <span>{loading ? 'Processing Order...' : `Place Order • ${currencySymbol}${totalAmount.toFixed(0)}`}</span>
+                <span>
+                  {loading
+                    ? 'Processing...'
+                    : paymentMethod === 'COD'
+                    ? `Place Order (COD) • ${currencySymbol}${totalAmount.toFixed(0)}`
+                    : `Pay with UPI / Razorpay • ${currencySymbol}${totalAmount.toFixed(0)}`}
+                </span>
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '14px', fontSize: '0.78rem', color: 'var(--color-text-light)' }}>
                 <ShieldCheck size={14} color="var(--color-accent)" />
-                <span>Encrypted & secure checkout</span>
+                <span>Encrypted 256-bit secure checkout</span>
               </div>
             </div>
           </div>

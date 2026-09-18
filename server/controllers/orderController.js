@@ -1,3 +1,4 @@
+const razorpayService = require('../services/razorpayService');
 const dbService = require('../services/dbService');
 const brandConfig = require('../config/brand.config');
 
@@ -54,7 +55,7 @@ exports.placeOrder = async (req, res) => {
     }
 
     // Validate Payment Method (UPI, CARD, COD) - No Apple Pay
-    if (!payment_method || !['UPI', 'CARD', 'COD'].includes(payment_method)) {
+    if (!payment_method || !['UPI', 'CARD', 'COD', 'RAZORPAY', 'RAZORPAY_UPI'].includes(payment_method)) {
       return res.status(400).json({ error: 'Please select a valid payment method (UPI, CARD, or COD).' });
     }
 
@@ -345,5 +346,268 @@ exports.reverseMilestoneCredit = async (req, res) => {
   } catch (err) {
     console.error('Reverse milestone error:', err.message);
     return res.status(400).json({ error: err.message || 'Failed to reverse milestone credit.' });
+  }
+};
+
+
+/**
+ * Public: Get Razorpay Configuration
+ * GET /api/orders/razorpay/config
+ */
+exports.getRazorpayConfig = async (req, res) => {
+  try {
+    return res.json({
+      success: true,
+      key_id: razorpayService.getKeyId(),
+      is_configured: razorpayService.isConfigured(),
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to retrieve payment configuration.' });
+  }
+};
+
+/**
+ * Customer: Create Razorpay Order
+ * POST /api/orders/razorpay/create-order
+ * Recalculates cart total strictly server-side before generating Razorpay order.
+ */
+exports.createRazorpayOrder = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Please sign in to proceed to checkout.' });
+    }
+
+    const customer = await dbService.getUserById(req.user.id);
+    if (!customer) {
+      return res.status(401).json({ error: 'Customer profile not found. Please sign in again.' });
+    }
+
+    const { items, fulfillment_type, delivery_address } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Your shopping bag is empty.' });
+    }
+
+    if (!fulfillment_type || !['DELIVERY', 'PICKUP'].includes(fulfillment_type)) {
+      return res.status(400).json({ error: 'Please select a valid fulfillment type (DELIVERY or PICKUP).' });
+    }
+
+    if (fulfillment_type === 'DELIVERY' && (!delivery_address || typeof delivery_address !== 'string' || delivery_address.trim().length < 5)) {
+      return res.status(400).json({ error: 'Please provide a complete delivery address.' });
+    }
+
+    const settings = await dbService.getStoreSettings();
+    const deliveryFee = fulfillment_type === 'DELIVERY' ? Number(settings.default_delivery_fee) : 0.0;
+
+    let subtotal = 0;
+    for (const item of items) {
+      const productId = item.product_id || item.id;
+      if (!productId) return res.status(400).json({ error: 'Invalid product item in bag.' });
+
+      const product = await dbService.getProductById(productId);
+      if (!product || product.is_archived === 1) {
+        return res.status(400).json({ error: `Item "${item.name || 'Dessert'}" is no longer available in our boutique.` });
+      }
+      if (product.available === 0) {
+        return res.status(400).json({ error: `"${product.name}" is currently sold out for today.` });
+      }
+
+      const quantity = parseInt(item.quantity, 10);
+      if (isNaN(quantity) || quantity <= 0 || quantity > 50) {
+        return res.status(400).json({ error: `Invalid quantity for "${product.name}".` });
+      }
+
+      let unitPrice = Number(product.price);
+      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+        if (!item.selected_variant) {
+          unitPrice = Number(product.variants[0].price);
+        } else {
+          const candidate = String(item.selected_variant).trim().toLowerCase();
+          const matched = product.variants.find(v => 
+            String(v.id).toLowerCase() === candidate ||
+            String(v.name).toLowerCase() === candidate
+          );
+          if (matched) {
+            unitPrice = Number(matched.price);
+          } else {
+            return res.status(400).json({ error: `Invalid option selected for "${product.name}".` });
+          }
+        }
+      }
+
+      subtotal += unitPrice * quantity;
+    }
+
+    const totalAmount = subtotal + deliveryFee;
+
+    const razorpayOrder = await razorpayService.createOrder({
+      amount: totalAmount,
+      receipt: `rcpt_${Date.now().toString().slice(-8)}`,
+      notes: {
+        customer_id: String(customer.id),
+        customer_phone: customer.phone || '',
+        customer_email: customer.email || '',
+      },
+    });
+
+    return res.json({
+      success: true,
+      razorpay_order_id: razorpayOrder.razorpay_order_id,
+      amount: razorpayOrder.amount, // in paise
+      currency: razorpayOrder.currency,
+      key_id: razorpayOrder.key_id,
+      mode: razorpayOrder.mode,
+      customer: {
+        name: customer.name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+      },
+    });
+  } catch (err) {
+    console.error('Create Razorpay order error:', err.message);
+    return res.status(500).json({ error: 'Failed to initiate payment: ' + err.message });
+  }
+};
+
+/**
+ * Customer: Verify Razorpay Payment & Place Order
+ * POST /api/orders/razorpay/verify-payment
+ */
+exports.verifyRazorpayPayment = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Please sign in to complete your order.' });
+    }
+
+    const customer = await dbService.getUserById(req.user.id);
+    if (!customer) {
+      return res.status(401).json({ error: 'Customer profile not found. Please sign in again.' });
+    }
+
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      items,
+      fulfillment_type,
+      delivery_address,
+      pickup_time,
+      notes,
+    } = req.body;
+
+    // Cryptographic signature check
+    const isValidSignature = razorpayService.verifyPaymentSignature({
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    });
+
+    if (!isValidSignature) {
+      return res.status(400).json({ error: 'Payment signature verification failed. The transaction could not be verified.' });
+    }
+
+    // Validate Items Cart
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Your shopping bag is empty.' });
+    }
+
+    // Recalculate Subtotal Server-Side from Product Database
+    const settings = await dbService.getStoreSettings();
+    const deliveryFee = fulfillment_type === 'DELIVERY' ? Number(settings.default_delivery_fee) : 0.0;
+
+    let subtotal = 0;
+    const orderItems = [];
+
+    for (const item of items) {
+      const productId = item.product_id || item.id;
+      const product = await dbService.getProductById(productId);
+      if (!product || product.is_archived === 1) {
+        return res.status(400).json({ error: `Item "${item.name || 'Dessert'}" is no longer available in our boutique.` });
+      }
+
+      const quantity = parseInt(item.quantity, 10) || 1;
+      let unitPrice = Number(product.price);
+      let variantName = null;
+      let selectedTopping = item.selected_topping ? String(item.selected_topping).trim().slice(0, 50) : null;
+
+      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+        if (!item.selected_variant) {
+          unitPrice = Number(product.variants[0].price);
+          variantName = product.variants[0].name;
+        } else {
+          const candidate = String(item.selected_variant).trim().toLowerCase();
+          const matchedVariant = product.variants.find(v => 
+            String(v.id).toLowerCase() === candidate ||
+            String(v.name).toLowerCase() === candidate
+          );
+          if (matchedVariant) {
+            unitPrice = Number(matchedVariant.price);
+            variantName = matchedVariant.name;
+          }
+        }
+      }
+
+      const itemTotal = unitPrice * quantity;
+      subtotal += itemTotal;
+
+      orderItems.push({
+        product_id: product.id,
+        product_name: product.name,
+        variant_name: variantName,
+        selected_topping: selectedTopping,
+        quantity,
+        unit_price: unitPrice,
+        total_price: itemTotal,
+      });
+    }
+
+    const totalAmount = subtotal + deliveryFee;
+
+    const cleanAddress = delivery_address ? delivery_address.trim() : null;
+    if (cleanAddress && !customer.default_address) {
+      await dbService.updateUser(customer.id, { default_address: cleanAddress });
+    }
+
+    // Save order in database with PAID status and Razorpay details
+    const order = await dbService.createOrder({
+      user_id: String(customer.id),
+      fulfillment_type,
+      subtotal,
+      delivery_fee: deliveryFee,
+      total_amount: totalAmount,
+      delivery_address: fulfillment_type === 'DELIVERY' ? cleanAddress : null,
+      pickup_time: fulfillment_type === 'PICKUP' ? (pickup_time ? String(pickup_time).trim().slice(0, 100) : 'Standard Boutique Hours') : null,
+      customer_name: customer.name,
+      customer_email: customer.email,
+      customer_phone: customer.phone,
+      notes: notes ? String(notes).trim().slice(0, 300) : null,
+      payment_method: 'RAZORPAY_UPI',
+      payment_status: 'PAID',
+      payment_reference: razorpay_payment_id,
+      razorpay_order_id,
+      status: 'NEW',
+      milestone_credited: 0,
+      milestone_credit_id: null,
+      items: orderItems,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Payment verified and order placed successfully!',
+      order: {
+        id: order.id,
+        order_number: order.order_number,
+        tracking_token: order.tracking_token,
+        total_amount: order.total_amount,
+        status: order.status,
+        payment_status: order.payment_status,
+        fulfillment_type: order.fulfillment_type,
+        created_at: order.created_at,
+        items: order.items,
+      },
+    });
+  } catch (err) {
+    console.error('Verify Razorpay payment error:', err.message);
+    return res.status(500).json({ error: 'Failed to verify payment: ' + err.message });
   }
 };
