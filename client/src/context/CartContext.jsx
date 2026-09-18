@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 const CartContext = createContext(null);
 
@@ -13,6 +13,10 @@ export const CartProvider = ({ children }) => {
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const isCartOpenRef = useRef(false);
+  isCartOpenRef.current = isCartOpen;
+
+  const isPoppingRef = useRef(false);
 
   useEffect(() => {
     localStorage.setItem('patisserie_cart', JSON.stringify(items));
@@ -52,7 +56,7 @@ export const CartProvider = ({ children }) => {
         },
       ];
     });
-    setIsCartOpen(true);
+    // NOTE: Removed setIsCartOpen(true) so adding items does not auto-open the cart drawer
   };
 
   const removeFromCart = (keyOrId) => {
@@ -84,6 +88,55 @@ export const CartProvider = ({ children }) => {
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
+  // History-aware Cart Navigation
+  const openCart = useCallback(() => {
+    if (isCartOpenRef.current) return;
+    setIsCartOpen(true);
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.pushState({ ...window.history.state, cartOpen: true }, '', window.location.href);
+      } catch (e) {}
+    }
+  }, []);
+
+  const closeCart = useCallback((skipHistory = false) => {
+    if (!isCartOpenRef.current) return;
+    setIsCartOpen(false);
+    if (!skipHistory && !isPoppingRef.current && typeof window !== 'undefined') {
+      try {
+        if (window.history.state && window.history.state.cartOpen) {
+          window.history.back();
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  const toggleCart = useCallback(() => {
+    if (isCartOpenRef.current) {
+      closeCart();
+    } else {
+      openCart();
+    }
+  }, [openCart, closeCart]);
+
+  // Synchronize cart state on browser popstate (phone back button or forward button)
+  useEffect(() => {
+    const handlePopState = (e) => {
+      isPoppingRef.current = true;
+      if (e.state && e.state.cartOpen) {
+        setIsCartOpen(true);
+      } else if (isCartOpenRef.current) {
+        setIsCartOpen(false);
+      }
+      setTimeout(() => {
+        isPoppingRef.current = false;
+      }, 60);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   return (
     <CartContext.Provider value={{
       items,
@@ -94,9 +147,9 @@ export const CartProvider = ({ children }) => {
       subtotal,
       itemCount,
       isCartOpen,
-      openCart: () => setIsCartOpen(true),
-      closeCart: () => setIsCartOpen(false),
-      toggleCart: () => setIsCartOpen((prev) => !prev)
+      openCart,
+      closeCart,
+      toggleCart
     }}>
       {children}
     </CartContext.Provider>

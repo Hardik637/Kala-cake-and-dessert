@@ -146,7 +146,7 @@ function MainApp() {
       // Close open modals / drawer when navigating backwards/forwards
       setIsAuthModalOpen(false);
       if (closeCart) {
-        closeCart();
+        closeCart(true);
       }
 
       window.scrollTo({ top: 0, behavior: 'instant' });
@@ -209,6 +209,10 @@ function MainApp() {
     const isSamePage = activePage === pageId && !isAdminMode;
     const isSamePath = window.location.pathname === route.path && (!token || window.location.search.includes(token));
 
+    if (closeCart) {
+      closeCart(true);
+    }
+
     // If already on this exact page and URL, just scroll to top without adding redundant history
     if (isSamePage && isSamePath) {
       if (!preserveScroll) {
@@ -217,8 +221,11 @@ function MainApp() {
       return;
     }
 
+    const hasCartState = typeof window !== 'undefined' && window.history.state && window.history.state.cartOpen;
+    const shouldReplace = replace || Boolean(hasCartState);
+
     // Push new history entry (or replace)
-    if (replace) {
+    if (shouldReplace) {
       window.history.replaceState({ page: pageId }, '', targetPath);
     } else {
       window.history.pushState({ page: pageId }, '', targetPath);
@@ -233,7 +240,7 @@ function MainApp() {
     if (!preserveScroll) {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
-  }, [activePage, isAdminMode]);
+  }, [activePage, isAdminMode, closeCart]);
 
   const handleOpenAdmin = () => {
     setIsAdminMode(true);
@@ -336,10 +343,20 @@ function MainApp() {
       {/* Slide-out Cart Drawer */}
       <CartDrawer
         onProceedCheckout={() => {
-          navigate('checkout');
+          if (closeCart) closeCart(true);
+          const hasCartState = typeof window !== 'undefined' && window.history.state && window.history.state.cartOpen;
+          navigate('checkout', { replace: Boolean(hasCartState) });
         }}
         onExploreMenu={() => {
-          navigate('menu');
+          if (closeCart) closeCart(true);
+          const hasCartState = typeof window !== 'undefined' && window.history.state && window.history.state.cartOpen;
+          if (activePage === 'menu') {
+            if (hasCartState && typeof window !== 'undefined') {
+              window.history.back();
+            }
+          } else {
+            navigate('menu', { replace: Boolean(hasCartState) });
+          }
         }}
       />
 
