@@ -37,15 +37,27 @@ export default function OrderTrackingPage({ trackOrderId, setActivePage }) {
   };
 
   useEffect(() => {
-    if (trackOrderId) {
-      setSearchToken(trackOrderId);
-      fetchTracking(trackOrderId);
+    const urlToken = typeof window !== 'undefined' 
+      ? new URLSearchParams(window.location.search).get('token') 
+      : null;
+    const effectiveToken = trackOrderId || urlToken;
+    if (effectiveToken) {
+      setSearchToken(effectiveToken);
+      fetchTracking(effectiveToken);
     }
   }, [trackOrderId]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchTracking(searchToken);
+    if (searchToken && searchToken.trim()) {
+      try {
+        const clean = searchToken.trim();
+        const url = new URL(window.location.href);
+        url.searchParams.set('token', clean);
+        window.history.replaceState({ ...window.history.state, token: clean }, '', url.pathname + url.search);
+      } catch (err) {}
+      fetchTracking(searchToken);
+    }
   };
 
   const currencySymbol = settings?.currency_symbol || BRAND_CONFIG.currency || '₹';

@@ -6,7 +6,11 @@ import ProductModal from '../components/ProductModal';
 
 export default function MenuPage() {
   const [categories, setCategories] = useState([]);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState(() => {
+    if (typeof window === 'undefined') return 'all';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('category') || 'all';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -51,6 +55,29 @@ export default function MenuPage() {
           { id: 9, name: 'Cookie Tin', slug: 'cookie-tin' },
         ]);
       });
+  }, []);
+
+  // Sync activeCategory with URL query params without creating extra history entries
+  const handleCategoryChange = (slug) => {
+    setActiveCategory(slug);
+    try {
+      const url = new URL(window.location.href);
+      if (slug === 'all') {
+        url.searchParams.delete('category');
+      } else {
+        url.searchParams.set('category', slug);
+      }
+      window.history.replaceState({ ...window.history.state, category: slug }, '', url.pathname + url.search);
+    } catch (err) {}
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setActiveCategory(params.get('category') || 'all');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // Fetch products whenever category or search changes
@@ -112,7 +139,7 @@ export default function MenuPage() {
           <div className="category-scroll-container">
             <div className="category-tabs-scroll">
               <button
-                onClick={() => setActiveCategory('all')}
+                onClick={() => handleCategoryChange('all')}
                 className={`category-pill ${activeCategory === 'all' ? 'active' : ''}`}
               >
                 All
@@ -123,7 +150,7 @@ export default function MenuPage() {
                 return (
                   <button
                     key={cat.id || cat.slug}
-                    onClick={() => setActiveCategory(cat.slug)}
+                    onClick={() => handleCategoryChange(cat.slug)}
                     className={`category-pill ${isActive ? 'active' : ''}`}
                   >
                     {cat.name}
@@ -145,7 +172,7 @@ export default function MenuPage() {
             <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>No desserts found</h3>
             <p style={{ fontSize: '0.92rem' }}>Try choosing another category or clearing your search.</p>
             <button
-              onClick={() => { setActiveCategory('all'); setSearchQuery(''); }}
+              onClick={() => { handleCategoryChange('all'); setSearchQuery(''); }}
               className="btn btn-secondary"
               style={{ marginTop: '16px', minHeight: '40px' }}
             >

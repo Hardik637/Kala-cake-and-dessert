@@ -20,6 +20,15 @@ export default function Navbar({ onOpenAuth, onOpenAdmin, activePage, setActiveP
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Close mobile drawer on browser back/forward (popstate)
+  useEffect(() => {
+    const handleNavPopState = () => {
+      setIsMobileMenuOpen(false);
+    };
+    window.addEventListener('popstate', handleNavPopState);
+    return () => window.removeEventListener('popstate', handleNavPopState);
+  }, []);
+
   // Lock body scroll when mobile menu is open
   useEffect(() => {
     if (isMobileMenuOpen) {

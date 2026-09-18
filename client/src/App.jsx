@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import { CartProvider, useCart } from './context/CartContext';
 import { ToastProvider } from './context/ToastContext';
 import { StoreSettingsProvider } from './context/StoreSettingsContext';
 
@@ -23,53 +23,231 @@ import AboutPage from './pages/AboutPage';
 import AdminPortal from './pages/admin/AdminPortal';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 
+// Canonical Path and Page Configuration
+export const PAGE_ROUTES = {
+  home: {
+    path: '/',
+    aliases: ['/home'],
+    title: 'Kalã — Cakes and Desserts | Artisanal Bakery Mumbai',
+  },
+  menu: {
+    path: '/menu',
+    aliases: [],
+    title: 'Our Menu | Kalã — Cakes and Desserts',
+  },
+  custom: {
+    path: '/custom-cakes',
+    aliases: ['/custom', '/customcakes'],
+    title: 'Custom Celebration Cakes | Kalã — Cakes and Desserts',
+  },
+  rewards: {
+    path: '/rewards',
+    aliases: [],
+    title: 'Loyalty Rewards | Kalã — Cakes and Desserts',
+  },
+  about: {
+    path: '/our-story',
+    aliases: ['/about', '/story'],
+    title: 'Our Story | Kalã — Cakes and Desserts',
+  },
+  checkout: {
+    path: '/checkout',
+    aliases: [],
+    title: 'Checkout | Kalã — Cakes and Desserts',
+  },
+  'order-tracking': {
+    path: '/order-tracking',
+    aliases: ['/track', '/orders/track'],
+    title: 'Track Your Order | Kalã — Cakes and Desserts',
+  },
+  profile: {
+    path: '/profile',
+    aliases: ['/account'],
+    title: 'My Profile | Kalã — Cakes and Desserts',
+  },
+};
+
+export function resolveRoute(pathname = '', hash = '') {
+  const cleanPath = (pathname || '').toLowerCase().replace(/\/+$/, '') || '/';
+  const cleanHash = (hash || '').replace('#', '').toLowerCase();
+
+  // Admin route check
+  if (cleanPath === '/admin' || cleanPath.startsWith('/admin') || cleanHash === 'admin') {
+    return { isAdmin: true, page: 'home' };
+  }
+
+  // Check direct matches and aliases
+  for (const [pageId, route] of Object.entries(PAGE_ROUTES)) {
+    if (cleanPath === route.path) {
+      return { isAdmin: false, page: pageId };
+    }
+    if (route.aliases && route.aliases.includes(cleanPath)) {
+      return { isAdmin: false, page: pageId };
+    }
+    if (cleanHash === pageId || (route.aliases && route.aliases.some((a) => a.replace('/', '') === cleanHash))) {
+      return { isAdmin: false, page: pageId };
+    }
+  }
+
+  // Default to home
+  return { isAdmin: false, page: 'home' };
+}
+
 function MainApp() {
-  const [activePage, setActivePage] = useState('home'); // home, menu, custom, rewards, checkout, order-tracking, profile, about
-  const [isAdminMode, setIsAdminMode] = useState(false);
+  // Synchronously initialize state from current URL location
+  const [activePage, setActivePageState] = useState(() => {
+    if (typeof window === 'undefined') return 'home';
+    const resolved = resolveRoute(window.location.pathname, window.location.hash);
+    return resolved.page;
+  });
+
+  const [isAdminMode, setIsAdminMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const resolved = resolveRoute(window.location.pathname, window.location.hash);
+    return resolved.isAdmin;
+  });
+
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [trackOrderId, setTrackOrderId] = useState(null);
+
+  const [trackOrderId, setTrackOrderId] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('token') || null;
+  });
 
   const { isAdminAuthenticated } = useAuth();
+  const { isCartOpen, closeCart } = useCart();
 
-  // Handle URL path and hash routing (/admin, #admin, #menu, etc.)
+  // Listen to browser Back/Forward (popstate) events
   useEffect(() => {
-    const handleRoute = () => {
-      const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.replace('#', '').toLowerCase();
+    const handlePopState = () => {
+      const resolved = resolveRoute(window.location.pathname, window.location.hash);
 
-      if (path === '/admin' || path.startsWith('/admin') || hash === 'admin') {
-        setIsAdminMode(true);
-      } else {
-        setIsAdminMode(false);
-        if (hash && ['menu', 'rewards', 'custom', 'checkout', 'profile', 'about'].includes(hash)) {
-          setActivePage(hash);
+      setIsAdminMode(resolved.isAdmin);
+      setActivePageState(resolved.page);
+
+      // Extract tracking token from query params if popping to tracking page
+      if (resolved.page === 'order-tracking') {
+        const params = new URLSearchParams(window.location.search);
+        const qToken = params.get('token');
+        if (qToken) {
+          setTrackOrderId(qToken);
         }
       }
+
+      // Update document title
+      if (resolved.isAdmin) {
+        document.title = 'Owner Portal | Kalã — Cakes and Desserts';
+      } else {
+        const route = PAGE_ROUTES[resolved.page] || PAGE_ROUTES.home;
+        document.title = route.title;
+      }
+
+      // Close open modals / drawer when navigating backwards/forwards
+      setIsAuthModalOpen(false);
+      if (closeCart) {
+        closeCart();
+      }
+
+      window.scrollTo({ top: 0, behavior: 'instant' });
     };
 
-    handleRoute();
-    window.addEventListener('popstate', handleRoute);
-    window.addEventListener('hashchange', handleRoute);
+    window.addEventListener('popstate', handlePopState);
     return () => {
-      window.removeEventListener('popstate', handleRoute);
-      window.removeEventListener('hashchange', handleRoute);
+      window.removeEventListener('popstate', handlePopState);
     };
+  }, [closeCart]);
+
+  // Initial mount: ensure canonical URL is in history without creating extra entries
+  useEffect(() => {
+    const resolved = resolveRoute(window.location.pathname, window.location.hash);
+    if (resolved.isAdmin) {
+      if (window.location.pathname !== '/admin') {
+        window.history.replaceState({ admin: true }, '', '/admin');
+      }
+      document.title = 'Owner Portal | Kalã — Cakes and Desserts';
+    } else {
+      const route = PAGE_ROUTES[resolved.page] || PAGE_ROUTES.home;
+      let targetPath = route.path;
+      if (window.location.search) {
+        targetPath += window.location.search;
+      }
+
+      // If user landed on alias (like /custom) or hash (like #menu), replace with canonical path
+      if (window.location.pathname !== route.path || window.location.hash) {
+        window.history.replaceState({ page: resolved.page }, '', targetPath);
+      } else if (!window.history.state) {
+        window.history.replaceState({ page: resolved.page }, '', targetPath);
+      }
+      document.title = route.title;
+    }
   }, []);
+
+  // Primary Path Navigation Function (called by setActivePage)
+  const navigate = useCallback((target, options = {}) => {
+    let pageId = target;
+    let opts = options;
+    if (typeof target === 'object' && target !== null) {
+      pageId = target.page;
+      opts = target;
+    }
+
+    const { replace = false, token = null, preserveScroll = false } = opts || {};
+
+    if (isAdminMode) {
+      setIsAdminMode(false);
+    }
+
+    const route = PAGE_ROUTES[pageId] || PAGE_ROUTES.home;
+    let targetPath = route.path;
+
+    if (token) {
+      setTrackOrderId(token);
+      targetPath = `${targetPath}?token=${encodeURIComponent(token)}`;
+    }
+
+    const isSamePage = activePage === pageId && !isAdminMode;
+    const isSamePath = window.location.pathname === route.path && (!token || window.location.search.includes(token));
+
+    // If already on this exact page and URL, just scroll to top without adding redundant history
+    if (isSamePage && isSamePath) {
+      if (!preserveScroll) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+
+    // Push new history entry (or replace)
+    if (replace) {
+      window.history.replaceState({ page: pageId }, '', targetPath);
+    } else {
+      window.history.pushState({ page: pageId }, '', targetPath);
+    }
+
+    setActivePageState(pageId);
+    document.title = route.title;
+
+    // Close any modal
+    setIsAuthModalOpen(false);
+
+    if (!preserveScroll) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [activePage, isAdminMode]);
 
   const handleOpenAdmin = () => {
     setIsAdminMode(true);
-    window.history.pushState({}, '', '/admin');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.history.pushState({ admin: true }, '', '/admin');
+    document.title = 'Owner Portal | Kalã — Cakes and Desserts';
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const handleBackToWebsite = () => {
     setIsAdminMode(false);
-    window.history.pushState({}, '', '/');
-    window.location.hash = '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate('home');
   };
 
-  // If Admin Mode is active (/admin or #admin)
+  // If Admin Mode is active (/admin)
   if (isAdminMode) {
     if (!isAdminAuthenticated) {
       return (
@@ -77,8 +255,9 @@ function MainApp() {
           onBackToWebsite={handleBackToWebsite}
           onLoginSuccess={() => {
             setIsAdminMode(true);
-            window.history.pushState({}, '', '/admin');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.history.pushState({ admin: true }, '', '/admin');
+            document.title = 'Owner Portal | Kalã — Cakes and Desserts';
+            window.scrollTo({ top: 0, behavior: 'instant' });
           }}
         />
       );
@@ -96,7 +275,7 @@ function MainApp() {
       {/* Sticky Navigation */}
       <Navbar
         activePage={activePage}
-        setActivePage={setActivePage}
+        setActivePage={navigate}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onOpenAdmin={handleOpenAdmin}
       />
@@ -105,7 +284,7 @@ function MainApp() {
       <main style={{ flexGrow: 1 }}>
         {activePage === 'home' && (
           <HomePage
-            setActivePage={setActivePage}
+            setActivePage={navigate}
             onOpenAuth={() => setIsAuthModalOpen(true)}
           />
         )}
@@ -120,14 +299,14 @@ function MainApp() {
 
         {activePage === 'rewards' && (
           <RewardsPage
-            setActivePage={setActivePage}
+            setActivePage={navigate}
             onOpenAuth={() => setIsAuthModalOpen(true)}
           />
         )}
 
         {activePage === 'checkout' && (
           <CheckoutPage
-            setActivePage={setActivePage}
+            setActivePage={navigate}
             onOpenAuth={() => setIsAuthModalOpen(true)}
             setTrackOrderId={setTrackOrderId}
           />
@@ -136,20 +315,20 @@ function MainApp() {
         {activePage === 'order-tracking' && (
           <OrderTrackingPage
             trackOrderId={trackOrderId}
-            setActivePage={setActivePage}
+            setActivePage={navigate}
           />
         )}
 
         {activePage === 'profile' && (
           <ProfilePage
-            setActivePage={setActivePage}
+            setActivePage={navigate}
             setTrackOrderId={setTrackOrderId}
           />
         )}
 
         {activePage === 'about' && (
           <AboutPage
-            setActivePage={setActivePage}
+            setActivePage={navigate}
           />
         )}
       </main>
@@ -157,12 +336,10 @@ function MainApp() {
       {/* Slide-out Cart Drawer */}
       <CartDrawer
         onProceedCheckout={() => {
-          setActivePage('checkout');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigate('checkout');
         }}
         onExploreMenu={() => {
-          setActivePage('menu');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          navigate('menu');
         }}
       />
 
@@ -175,7 +352,7 @@ function MainApp() {
 
       {/* Boutique Footer */}
       <Footer
-        setActivePage={setActivePage}
+        setActivePage={navigate}
         onOpenAdmin={handleOpenAdmin}
       />
     </div>
